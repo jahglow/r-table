@@ -1,0 +1,275 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../polymer/polymer.html">
+
+
+<script>
+
+  /** @polymerBehavior Polymer.RTableBehavior */
+
+  Polymer.RTableBehavior = {
+    hostAttributes: {
+      'column-header-override': true
+    },
+    properties: {
+
+      /**
+       * The index of the last frozen columns in this grid. A frozen column will always stay visible in the grid viewport when the user scrolls the grid viewport horizontally.
+       * Setting the property to 0 means that no columns will be frozen, but the built-in selection checkbox column will still be frozen if it’s in use.
+       * Setting the count to -1 will unfreeze the selection column also.
+       *
+       * [See vaadin frozenColumns](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html#frozenColumns)
+       *
+       * @attribute frozen-columns
+       */
+      frozenColumns:{
+        type:Number,
+        value:0
+      },
+      /**
+       * @type {Array.<object>} columns The array of columns attached to the grid.
+       *
+       * [See vaadin columns](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html#columns)
+       * */
+      columns:{
+        type:Array,
+        computed:'_computeColumnAttributes(columnsLegacy,renderer)',
+        notify:true
+      },
+      /**
+       * Custom render function for the column’s data items. Default is undefined.
+       * Currently it is not possible to set the renderer declaratively.
+       *
+       * `renderer.html(cell)` Renders cell as HTML.
+       * `renderer.striphtml(cell)` Strips all HTML from the cell.
+       * @type {Object.<object>}
+       * @param cell Reference to the cell being rendered. See the documentation for cell for more details.
+       * */
+      renderer:{
+        type: Object,
+        value: function(){
+          return {
+            html:function(cell){
+              cell.element.innerHTML = cell.data;
+            },
+            striphtml:function(cell){
+              var tempEl = document.createElement('span'); tempEl.innerHTML = cell.data;
+              cell.element.innerHTML=tempEl.textContent.trim();
+            }
+          }
+        }
+      },
+      /**
+       * You can specify properties of the columns of the Aggregated table that will be generated. Full list of properties can be seen in [vaadin-grid column spec](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html).
+       *```html
+       * <r-aggregated-table
+       *    columns-legacy="headerContent:New name for Header;
+       *                    sortable;hidable;flex:2|
+       *                    sortable;hidable;hidden;flex:1||
+       *                    maxWidth:300px;hidable">
+       * ...
+       * </r-aggregated-table>
+       * ```
+       * Reportal page editor doesn't allow inserting arrays/objects with double quotes yet, so it has to follow some synax to be deserialized.
+       * What does the value of `columns-legacy mean? We have specified some parameters to 3 colums, but from this code it's obvious that we have at least four.
+       * There can be more, but their parameters aren't specified.
+       *
+       * _So how does it work?_
+       *
+       * At first this string is split by '|' (_pipe_) and the pieces represent the string with attributes for a column.
+       * (as you can see from the example above, if you want to skip a column without passing any parameters to it, just put a pipe again like here: `...;flex:1||max-width:300px;...`)
+       *
+       * Then the string is split by ';' (_semicolon_) separating one attribute of this column from another.
+       *
+       * Finally it's split by ':' (_colon_) into key - value pair.
+       *
+       * _NOTE:_ `columns-legacy`'s value is already a string, so you don't need to escape strings in it with quotes. If there's a quote in the text, escape it with a back slash, like you normally would in JS.
+       * */
+      columnsLegacy:{
+        type:String,
+        value:''
+      },
+      /**
+       * Directive to override column headers of Aggregated Table with those defined in `columns` or `columnsLegacy` in `headerContent` property.
+       * */
+      columnHeaderOverride:{
+        type:Boolean,
+        value:false
+      },
+      /**
+       * Data that fills the rows of the table.
+       * */
+      data:{
+        type:Array,
+        value:[],
+        notify:true
+      },
+
+      actionData:{
+        type:Object,
+        observer:'voiceControl'
+      },
+      /**
+       * Sets the height of the grid so that the specified amount of data rows is visible. Overrides any height specified in CSS.
+       *
+       *  [See vaadin visibleRows](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/#visibleRows)
+       *  @default 10
+       */
+      visibleRows:Number,
+      /**
+       * Enables voice assistant.
+       * */
+      assisted:{
+        type:Boolean,
+        value:false
+      }
+    },
+
+    _computeColumnAttributes:function(legacy,renderer){
+      var attributes = [];
+      if(legacy && legacy.length>0){
+        var aColAttrs=legacy.split('|'), aL = aColAttrs.length, attrPairs, attrPair;
+        while(aL--){
+          var tempColProp ={};
+          attrPairs=aColAttrs[aL].split(';');
+          var apL = attrPairs.length;
+          while(apL--){
+            if(attrPairs[apL].length>0){
+              attrPair=attrPairs[apL].split(':');
+              tempColProp[attrPair[0]] = (attrPair[0]==='renderer'? (renderer.hasOwnProperty(attrPair[1])?renderer[attrPair[1]]:attrPair[1]):(attrPair.length>1 ? attrPair[1] : true));
+            }
+          }
+          attributes.unshift(tempColProp);
+        }
+      }
+      return attributes;
+    },
+
+    voiceControl:function(){
+      if(this.actionData.action && this.actionData.action.indexOf('table.')>-1){
+        console.log('we have the action');
+        var params = this.actionData.parameters;
+        var action = this.actionData.action.split('.')[1];
+        return this[action](params);
+      }
+    },
+    /**
+     * ### VoiceControl
+     *  `columnNumber` positive Number; -1 = last visible column
+     *
+     *  `sortOrder` {String} asc | desc
+     *
+     * @param {{columnNumber: Number, sortOrder: String}} params
+     * */
+    sortColumn:function(params){
+      console.log(params);
+      if(params.sortDirection && params.sortDirection.length>0 && params.columnNumber.col1){
+
+        if(!params.columnNumber1 && !params.sortDirection1){
+          console.log('first')
+          var idx = this._getColumnIndex(params.columnNumber.col1);
+          if( this.grid.columns[idx] && this.grid.columns[idx].sortable){this.grid.sortOrder = [{column: idx, direction:params.sortDirection}];}
+        } else {
+          console.log('first')
+          var idx1 = this._getColumnIndex(params.columnNumber.col1);
+          var idx2 = this._getColumnIndex(params.columnNumber1.col1);
+          console.log([{column: idx1, direction:params.sortDirection},{column: idx2, direction:params.sortDirection1}]);
+          if( this.grid.columns[idx1] && this.grid.columns[idx1].sortable && this.grid.columns[idx2] && this.grid.columns[idx2].sortable){
+            this.grid.sortOrder = [{column: idx1, direction:params.sortDirection},{column: idx2, direction:params.sortDirection1}];}
+        }
+
+      }
+    },
+    /**
+     * ### VoiceControl
+     *  `columnNumber` positive Number; -1 = last visible column
+     *
+     * @param {{columnNumber: Number}} params
+     * */
+    freezeColumn:function(params){
+      console.log(params);
+      if(params.columnNumber && params.columnNumber.col1){
+        var idx = this._getColumnIndex(params.columnNumber.col1);
+        console.log(idx+1);
+        if(params.columnNumber.col1 !== '-1' && this.grid.columns[idx]){this.grid.frozenColumns = idx+1;}
+      }
+    },
+    /**
+     * ### VoiceControl
+     * @param {Object} params
+     * @default null
+     * */
+    unfreezeColumns:function(params){
+        this.grid.frozenColumns = 0;
+    },
+    /**
+     * ### VoiceControl
+     *  `columnNumber` positive Number; -1 = last visible column
+     *
+     * @param {{columnNumber: Number}} params
+     * */
+    hideColumn:function(params){
+      console.log(params);
+      if(params.columnNumber && params.columnNumber!==null){
+        for(var col in params.columnNumber){
+          var idx = this._getColumnIndex(params.columnNumber[col]);
+          if(this.grid.columns[idx].hidable)this.grid.columns[idx].hidden = true;
+        }
+      }
+    },
+    /**
+     * ### VoiceControl
+     *  `columnNumber` positive Number; -1 = last visible column
+     *
+     * @param {{columnNumber: Number}} params
+     * */
+    showAllColumns:function(params){
+      console.log(params);
+        this.grid.columns.forEach(function(column){column.hidden = false});
+    },
+    /**
+     * ### VoiceControl
+     *  `params.columnNumber` {Number} (-1 = last)
+     *
+     * @param {Object} columnNumber
+     * */
+    _getColumnIndex:function(columnNumber){
+      var columns = this.grid.columns.filter(function(column){return !column.hidden});
+      var col = parseInt(columnNumber)>0?parseInt(columnNumber)-1:columns.length-1;//virtual  index against visible columns
+      return parseInt(this.grid.columns.indexOf(columns[col]));
+    },
+    /**
+     * Converts array["key","value"] to object {key:"value"} respecting int,string,bool
+     */
+    _a2o:function(obj,key,val){
+      if(obj && key){
+        if(val && val.length>0){
+          if(key!=='renderer'){
+            obj[key]=this._isInt(val)?parseInt(val):val;
+          } else { // process renderers via this.renderer.Renderer_name property
+            obj[key]=this.renderer[val];
+          }
+        } else {obj[key]=true;} //it's a boolean
+      }
+    },
+    /**
+     * Checks if value is a number
+     */
+    _isInt:function(val){
+      return (!isNaN(parseInt(val)) && parseInt(val).toString().length===val.length);
+    },
+    _getImmediateChildrenByName:function(source, tagname){
+      return Polymer.dom(source).children.filter(function(item){return item.localName===tagname});
+    }
+  };
+
+</script>
+
