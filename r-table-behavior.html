@@ -44,6 +44,22 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         computed:'_computeColumnAttributes(columnsLegacy,renderer)',
         notify:true
       },
+      clickedRow:{
+        type:Number,
+        value:null,
+        readOnly:true,
+        notify:true
+      },
+      clickedColumn:{
+        type:Number,
+        value:null,
+        readOnly:true,
+        notify:true
+      },
+      notifyClick:{
+        type:Boolean,
+        value:false
+      },
       /**
        * Custom render function for the column’s data items. Default is undefined.
        * Currently it is not possible to set the renderer declaratively.
@@ -117,6 +133,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         type:Object,
         observer:'voiceControl'
       },
+      _hidableColumns:{
+        type:Array,
+        observer:'_observeHidable'
+      },
       /**
        * Sets the height of the grid so that the specified amount of data rows is visible. Overrides any height specified in CSS.
        *
@@ -132,7 +152,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         value:false
       }
     },
+    _observeHidable:function(hidable){
+      if(hidable && hidable.length>0){
+        var columnList = this.querySelector('#columnToggle paper-listbox.dropdown-content');
+        columnList.selectedValues = hidable.map(function(item,index){if(!item.hidden){return (item.colIndex).toString()}});
+        columnList.addEventListener('iron-select',function(e){this._reflectColumnToggle(e)}.bind(this));
+        columnList.addEventListener('iron-deselect',function(e){this._reflectColumnToggle(e)}.bind(this));
+      }
 
+    },
+    _reflectColumnToggle:function(event){
+      var item=Polymer.dom(event).event.detail.item;
+      var col=parseInt(item.attributes.getNamedItem('value').value);
+      this.$.grid.columns[this.indexed? col +1:col].hidden=item.attributes.getNamedItem('selected')?false:true;
+    },
     _computeColumnAttributes:function(legacy,renderer){
       var attributes = [];
       if(legacy && legacy.length>0){
@@ -150,6 +183,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           attributes.unshift(tempColProp);
         }
       }
+      this._hidableColumns = attributes.filter(function(col){return col.hidable}).map(function(item){item.colIndex = this.indexed?attributes.indexOf(item)+1:attributes.indexOf(item); return item});
       return attributes;
     },
 

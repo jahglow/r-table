@@ -37,12 +37,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <h3>r-aggregated-table indexed</h3>
   <demo-snippet>
     <template>
-
+<script>function gotoSection(idx){
+  document.querySelector('r-aggregated-table #toolboxContainer').toggle();
+}</script>
       <r-aggregated-table heading="Aggregated Table"
-              indexed
-              indexed-header="index"
-              assisted
-              columns-legacy="sortable;headerContent:Sections;hidable;hidingToggleText:Sections|sortable;hidingToggleText:Marget;hidable|hidable|hidable|hidable;renderer:html;sortable|hidable;sortable">
+              indexed indexed-header="index" notify-click assisted columns-legacy="sortable;headerContent:Sections;hidable;hidingToggleText:Sections|sortable;hidingToggleText:Marget;hidable|hidable;clickable;clickableFunction:gotoSection(1)|hidable|hidable;renderer:html;sortable|hidable;sortable">
         <table id="confirmit_agg_table" class="t0_table bgred_txtwhite">
           <colgroup>
             <col width="250">

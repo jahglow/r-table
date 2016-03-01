@@ -18,14 +18,13 @@
   ],
   "dependencies": {
     "polymer": "Polymer/polymer#^1.0.0",
-    "r-card": "jahglow/r-card#*",
+    "r-card": "jahglow/r-card#^1.1.1",
     "vaadin-grid": "vaadin/vaadin-grid#^1.0.0",
     "iron-flex-layout": "PolymerElements/iron-flex-layout#^1.0.0",
     "paper-icon-button": "PolymerElements/paper-icon-button#^1.0.0",
     "paper-item": "PolymerElements/paper-item#^1.0.0",
     "paper-listbox": "polymerelements/paper-listbox#^1.0.0",
     "paper-menu-button": "PolymerElements/paper-menu-button#^1.0.0"
-
   },
   "devDependencies": {
     "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
