@@ -14,6 +14,6 @@ See `vaadin-grid` [API docs](https://cdn.vaadin.com/vaadin-core-elements/latest/
 
 Example:
 
-    <r-aggregated-table >
+    <r-aggregated-table>
       <confirmit:wysiwygcomponent type="AggregatedTable" id="cdde7f88-9718-4694-a97c-161fe8fc4292" />
     </r-aggregated-table>
