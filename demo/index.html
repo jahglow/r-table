@@ -41,7 +41,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   document.querySelector('r-aggregated-table #toolboxContainer').toggle();
 }</script>
       <r-aggregated-table heading="Aggregated Table"
-              indexed indexed-header="index" notify-click assisted columns-legacy="sortable;headerContent:Sections;hidable;hidingToggleText:Sections|sortable;hidingToggleText:Marget;hidable|hidable;clickable;clickableFunction:gotoSection(1)|hidable|hidable;renderer:html;sortable|hidable;sortable">
+                          filterable
+                          indexed
+                          indexed-header="index"
+                          notify-click
+                          assisted
+                          columns-legacy="sortable;filterable;headerContent:Sections;hidable;hidingToggleText:Sections|sortable;filterable;hidingToggleText:Marget;hidable|hidable;clickable;clickableIcon:settings-ethernet;clickableTooltip:Click to expand the Toolbox drawer;clickableFunction:gotoSection(1)|hidable|hidable;renderer:html;sortable|hidable;sortable">
         <table id="confirmit_agg_table" class="t0_table bgred_txtwhite">
           <colgroup>
             <col width="250">
