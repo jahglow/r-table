@@ -1,17 +1,17 @@
 {
-  "name": "r-aggregated-table",
-  "version": "1.0.1",
+  "name": "r-table",
+  "version": "1.0.3",
   "authors": [
-    "Anonymous <anonymous@example.com>"
+    "John Archer <jahglow@gmail.com>"
   ],
-  "description": "An element providing a solution to no problem in particular.",
+  "description": "A set of reportal elements that aggregate data into a table",
   "keywords": [
     "web-component",
     "polymer"
   ],
-  "main": "r-aggregated-table.html",
+  "main": "r-table-behavior.html",
   "license": "http://polymer.github.io/LICENSE.txt",
-  "homepage": "https://github.com/jahglow/r-aggregated-table/",
+  "homepage": "https://github.com/jahglow/r-table/",
   "ignore": [
     "/.*",
     "/test/"
