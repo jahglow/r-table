@@ -40,7 +40,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
        * */
       columns:{
         type:Array,
-        computed:'_computeColumnAttributes(columnsLegacy,renderer)',
+        computed:'_computeColumnAttributes(columnsLegacy,renderer,_sortOrder,indexed)',
         notify:true
       },
       /**
@@ -127,7 +127,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
        * [See vaadin columns API (select 'column' in dropdown)](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html#columns)
        *
        *  ### Additional columns API:
-       *  clickable;clickableFunction:gotoSection(1)
        *
        *  `clickable {Boolean}` - whether the header will receive click to execute a custom function. **NOTE: this feature is incompatible with `sortable`.**
        *
@@ -136,6 +135,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
        *  `clickableFunction {Function}` pass a function that is executed on clicking the icon.
        *
        *  `clickableTooltip {String}` sets a tooltip under the clickable icon.
+       *
+       *  `sortDirection {String} (asc|desc)` sets sort direction for a `sortable` column. There may be up to 2 pre-sorted columns. The first sorted column takes precedence.
        *
        *  */
       columnsLegacy:{
@@ -162,6 +163,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         type:Object,
         observer:'_voiceControl'
       },
+      /**
+       * Populated by `_computeColumnAttributes`, to generate a proper column toggle list for hidden columns
+       * */
       _hidableColumns:{
         type:Array,
         observer:'_observeHidable'
@@ -180,16 +184,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         type:Boolean,
         value:false
       },
-      _searchRowVisible:{
+      _filterRowVisible:{
         type:Boolean,
         value:false
+      },
+      _sortOrder:{
+        type:Array,
+        value:[]
       }
     },
     /**
      * toggles visibility of a search row (under column headings) that contains inputs to filter data.
      * */
     toggleSearchRow:function(event){
-        if(!this._searchRowVisible){
+        if(!this._filterRowVisible){
           this.$.grid.header.addRow();
           var filterRow = this.$.grid.header.rowCount -1;
           this.$.grid.header.setRowClassName(filterRow, 'filterRow');
@@ -198,40 +206,21 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             if(column.filterable){
               var cell = this.$.grid.header.getCell(filterRow, this.indexed?index +1:index);
               var input = document.createElement('paper-input');
-              input.noLabelFloat = true;
-              input.type='search';
-              input.style.width='30px';
-              input.placeholder = 'Filter';
-              input.addEventListener('value-changed', function(e){this.filterData(this.indexed?index +1:index, e)}.bind(this));
+              input.noLabelFloat = true; input.type='search'; input.style.width='30px'; input.placeholder = 'Filter';
+              input.addEventListener('value-changed', function(){this.filterData()}.bind(this));
               cell.content = input;
             }
           }.bind(this));
-          this._searchRowVisible=true;
+          this._filterRowVisible=true;
 
         } else {
           this.$.grid.header.removeRow(this.$.grid.header.rowCount - 1);
           this.$.grid.items = this.data;
-          this._searchRowVisible=false;
+          this._filterRowVisible=false;
         }
     },
-    _observeHidable:function(hidable){
-      if(hidable && hidable.length>0){
-        var columnList = this.querySelector('#columnToggle paper-listbox.dropdown-content');
-        columnList.selectedValues = hidable.map(function(item,index){if(!item.hidden){return (item.colIndex).toString()}});
-        columnList.addEventListener('iron-select',function(e){this._reflectColumnToggle(e)}.bind(this));
-        columnList.addEventListener('iron-deselect',function(e){this._reflectColumnToggle(e)}.bind(this));
-      }
-    },
-    /**
-     * Reflects columns toggling to vaadin-grid (replaces default column toggler to be able to move the controls into the card drawer)
-     */
-    _reflectColumnToggle:function(event){
-      var item=Polymer.dom(event).event.detail.item;
-      var col=parseInt(item.attributes.getNamedItem('value').value);
-      this.$.grid.columns[this.indexed? col +1:col].hidden=item.attributes.getNamedItem('selected')?false:true;
-    },
 
-    _computeColumnAttributes:function(legacy,renderer){
+    _computeColumnAttributes:function(legacy,renderer,sortOrder,indexed){
       var attributes = [];
       if(legacy && legacy.length>0){
         var aColAttrs=legacy.split('|'), aL = aColAttrs.length, attrPairs, attrPair;
@@ -243,6 +232,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             if(attrPairs[apL].length>0){
               attrPair=attrPairs[apL].split(':');
               tempColProp[attrPair[0]] = (attrPair[0]==='renderer'? (renderer.hasOwnProperty(attrPair[1])?renderer[attrPair[1]]:attrPair[1]):(attrPair.length>1 ? attrPair[1] : true));
+              if(attrPair[0]==='sortDirection'){sortOrder.unshift({column: (indexed?aL+1:aL), direction: attrPair[1]})}
             }
           }
           attributes.unshift(tempColProp);
@@ -322,6 +312,36 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           var idx = this._getColumnIndex(params.columnNumber[col]);
           if(this.grid.columns[idx].hidable)this.grid.columns[idx].hidden = true;
         }
+      }
+      this._updateFilteredData();
+    },
+    /**
+     * `_observeHidable` sets a list of hidable-columns
+     * */
+    _observeHidable:function(hidable){
+      if(hidable && hidable.length>0){
+        var columnList = this.querySelector('#columnToggle paper-listbox.dropdown-content');
+        columnList.selectedValues = hidable.map(function(item,index){if(!item.hidden){return (item.colIndex).toString()}});
+        columnList.addEventListener('iron-select',function(e){this._reflectColumnToggle(e)}.bind(this));
+        columnList.addEventListener('iron-deselect',function(e){this._reflectColumnToggle(e)}.bind(this));
+      }
+    },
+    /**
+     * Reflects columns toggling to vaadin-grid (replaces default column toggler to be able to move the controls into the card drawer). Updates filtered columns if filter row is displayed
+     */
+    _reflectColumnToggle:function(event){
+      var item=Polymer.dom(event).event.detail.item;
+      var col=parseInt(item.attributes.getNamedItem('value').value);
+      this.$.grid.columns[this.indexed? col +1:col].hidden=item.attributes.getNamedItem('selected')?false:true;
+      this._updateFilteredData(col);
+    },
+    /**
+     * Updates data-filtering for columns that had active filters and were hidden/shown
+     * @method _updateFilteredData
+     * */
+    _updateFilteredData:function(index){
+      if(this.filterable && this._filterRowVisible && typeof this.filterData ==='function'){
+        if(index){if(this.$.grid.columns[this.indexed? index +1:index].filterable){this.filterData();}} else {this.filterData();}
       }
     },
     /**

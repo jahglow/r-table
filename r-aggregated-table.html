@@ -154,10 +154,8 @@ Example:
             if(this.indexed){this.frozenColumns+=1;}
             grid.frozenColumns=this.frozenColumns;
           }
-          //Polymer.dom(grid).setAttribute('id','vgrid');
-          //Polymer.dom(this.$.grid).appendChild(grid);
-          //grid.then(function(){this.notifyResize()}.bind(this));
-          this.grid.addEventListener('sort-order-changed',function(e){return this._sortChange(e)}.bind(this))
+          this.grid.addEventListener('sort-order-changed',function(e){return this._sortChange(e)}.bind(this));
+          grid.sortOrder=this._sortOrder;
         }
       },
       _defineData:function(table){
@@ -209,7 +207,6 @@ Example:
           /* will add a row for filters*/
           if(this.filterable){
           }
-
         }
 
       },
@@ -305,40 +302,45 @@ Example:
        * If so, reverses the sorting, else does the sorting from `_sorter`
        * */
       _sortChange:function(){
-        var idx = this.grid.sortOrder[0].column;
-        if(this._sortedColumn === idx){
-          this.data.reverse(); /*if this column was sorted before just flip it*/
+        var grid = this.$.grid;
+        if(grid.sortOrder.length===1 && this._sortedColumn === grid.sortOrder[0].column){
+          grid.items.reverse(); /*if this column was sorted before just flip it*/
         } else { //not sorted
-          this._sorter();
+          grid.items.sort(function(a,b){
+            if(grid.sortOrder.length>1){
+              return this._sorter(a,b,grid.sortOrder[0].column, grid.sortOrder[0].direction === 'asc' ? 1 : -1) || this._sorter(a,b,grid.sortOrder[1].column, grid.sortOrder[1].direction === 'asc' ? 1 : -1)
+            } else {
+              return this._sorter(a,b,grid.sortOrder[0].column, grid.sortOrder[0].direction === 'asc' ? 1 : -1)
+            }
+          }.bind(this));
         }
-        this._sortedColumn = this.grid.sortOrder[0].column;
+        this._sortedColumn = grid.sortOrder.length===1? grid.sortOrder[0].column : null;
       },
-      /** Applies sorting to one column*/
-      _sorter:function(){
-        var grid = this.grid;
-        var idx = grid.sortOrder[0].column;
-        var lesser = grid.sortOrder[0].direction === 'asc' ? -1 : 1;
-        this.data.sort(function(a,b){
-          var x,y;
-          x = a[idx]; y = b[idx];
-          var regex = /[<>]/g;
-          if(regex.test(x) || regex.test(y)){ // if we need to sort elements that have HTML like links
-            var tempEl1 = document.createElement('span'); tempEl1.innerHTML = x;
-            x=tempEl1.textContent.trim();
-            var tempEl2 = document.createElement('span'); tempEl2.innerHTML = y;
-            y=tempEl2.textContent.trim();
-          }
-          if(!isNaN(parseFloat(x)) && !isNaN(parseFloat(y))){
-            return parseFloat(x) <  parseFloat(y) ? lesser :  parseFloat(x) >  parseFloat(y) ? -lesser : 0;
-          } else {
-            return x.toLowerCase() < y.toLowerCase() ? lesser : x.toLowerCase() > y.toLowerCase() ? -lesser : 0;
-          }
-        });
+      /** Applies sorting to one column so far */
+      _sorter:function(a,b,idx,lesser){
+        var x,y;
+        x = a[idx]; y = b[idx];
+        var regex = /[<>]/g;
+        if(regex.test(x) || regex.test(y)){ // if we need to sort elements that have HTML like links
+          var tempEl1 = document.createElement('span'); tempEl1.innerHTML = x;
+          x=tempEl1.textContent.trim();
+          var tempEl2 = document.createElement('span'); tempEl2.innerHTML = y;
+          y=tempEl2.textContent.trim();
+        }
+        if(!isNaN(parseFloat(x)) && !isNaN(parseFloat(y))){
+          return parseFloat(x) <  parseFloat(y) ? lesser :  parseFloat(x) >  parseFloat(y) ? -lesser : 0;
+        } else {
+          return x.toLowerCase() < y.toLowerCase() ? lesser : x.toLowerCase() > y.toLowerCase() ? -lesser : 0;
+        }
       },
-      filterData:function(column, event){
+      /**
+       * Filters data based on column-filters in a filter row. Filtering takes place on a per-column basis whenever one of the filtering inputs changes its value.
+       * Filtering is based on _visible_ columns only, i.e. if the filter contained value and the column was filtered against it, and then the column was hidden, this filter will be disregarded until the column becomes visible again.
+       * */
+      filterData:function(){
         /** if one filter is cleared, there might be other filters that contain data. If so, we need to filter against those*/
         this.debounce('columnFilter',function(){
-                  var filterable = this.columns.filter(function(col){return col.filterable}).map(function(col){return this.indexed?col.colIndex +1 :col.colIndex}.bind(this));
+          var filterable = this.columns.filter(function(col){return col.filterable && !col.hidden}).map(function(col){return this.indexed?col.colIndex +1 :col.colIndex}.bind(this));
                   this.$.grid.items = this.data;
                   filterable.forEach(function(col){
                     var cell = this.$.grid.header.getCell(this.$.grid.header.rowCount -1, col);

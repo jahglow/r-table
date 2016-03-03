@@ -37,16 +37,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <h3>r-aggregated-table indexed</h3>
   <demo-snippet>
     <template>
-<script>function gotoSection(idx){
-  document.querySelector('r-aggregated-table #toolboxContainer').toggle();
-}</script>
+      <script>function gotoSection(idx){
+        alert('Feel free to execute any code here. In reality you\'d be redirected to section '+ idx);
+      }
+      </script>
       <r-aggregated-table heading="Aggregated Table"
                           filterable
                           indexed
                           indexed-header="index"
                           notify-click
                           assisted
-                          columns-legacy="sortable;filterable;headerContent:Sections;hidable;hidingToggleText:Sections|sortable;filterable;hidingToggleText:Marget;hidable|hidable;clickable;clickableIcon:settings-ethernet;clickableTooltip:Click to expand the Toolbox drawer;clickableFunction:gotoSection(1)|hidable|hidable;renderer:html;sortable|hidable;sortable">
+                          columns-legacy="sortable;flex;sortDirection:asc;filterable;headerContent:Sections;hidable;hidingToggleText:Sections|sortable;sortDirection:desc;filterable;hidingToggleText:Marget;hidable|hidable;clickable;clickableIcon:settings-ethernet;clickableTooltip:Click to expand the Toolbox drawer;clickableFunction:gotoSection(4)|hidable|hidable;renderer:html;sortable|hidable;sortable">
         <table id="confirmit_agg_table" class="t0_table bgred_txtwhite">
           <colgroup>
             <col width="250">
@@ -112,7 +113,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           </td><td class="t0_dc_total bgpink">1</td></tr>
           <tr class="t0_tr">
             <td class="t0_hc_total bgpink">Clear &amp; Promising Direction - Division</td>
-            <td class="t0_dc_total cf_Green bgpink">78</td><td class="t0_dc_total cf_Yellow bgpink">16</td><td class="t0_dc_total cf_Grey bgpink">6</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_38"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
+            <td class="t0_dc_total cf_Green bgpink">77</td><td class="t0_dc_total cf_Yellow bgpink">16</td><td class="t0_dc_total cf_Grey bgpink">6</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_38"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
             <td class="barchart-cell" title="% Fav" width="78%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
             <td class="barchart-cell" title="% Neut" width="16%" style="background:#ffc800;">&nbsp;</td>
             <td class="barchart-cell" title="%Unfav" width="6%" style="background:#c5c5c5;">&nbsp;</td>
@@ -126,6 +127,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             <td class="barchart-cell" title="%Unfav" width="9%" style="background:#c5c5c5;">&nbsp;</td>
           </tr></tbody></table>
           </td><td class="t0_dc_total bgpink">3</td></tr>
+          <tr class="t0_tr">
+            <td class="t0_hc_total bgpink">Clear &amp; Promising Direction - Division</td>
+            <td class="t0_dc_total cf_Green bgpink">78</td><td class="t0_dc_total cf_Yellow bgpink">16</td><td class="t0_dc_total cf_Grey bgpink">6</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_38"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
+            <td class="barchart-cell" title="% Fav" width="78%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
+            <td class="barchart-cell" title="% Neut" width="16%" style="background:#ffc800;">&nbsp;</td>
+            <td class="barchart-cell" title="%Unfav" width="6%" style="background:#c5c5c5;">&nbsp;</td>
+          </tr></tbody></table>
+          </td><td class="t0_dc_total bgpink">0</td></tr>
           <tr class="t0_tr">
             <td class="t0_hc_total bgpink">Performance Management</td>
             <td class="t0_dc_total cf_Green bgpink">68</td><td class="t0_dc_total cf_Yellow bgpink">18</td><td class="t0_dc_total cf_Grey bgpink">14</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_44"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
@@ -225,6 +234,17 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           </tbody>
         </table>
       </r-aggregated-table>
+      <script>
+        HTMLImports.whenReady(function(){
+          var aggregatedTable = document.querySelector('r-aggregated-table');
+          // we want the first data-column have bold text, thus wrap it with <strong>
+          aggregatedTable.columns[0].renderer = function(cell){
+            var tempEl = document.createElement('strong');
+            tempEl.innerHTML = cell.data;
+            cell.element.innerHTML=tempEl.outerHTML;
+          }
+        })
+      </script>
     </template>
   </demo-snippet>
 
