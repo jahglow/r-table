@@ -34,21 +34,27 @@ See `vaadin-grid` [API docs](https://cdn.vaadin.com/vaadin-core-elements/latest/
 
 Example:
 
-    <r-aggregated-table >
+    <r-aggregated-table>
       <confirmit:wysiwygcomponent type="AggregatedTable" id="cdde7f88-9718-4694-a97c-161fe8fc4292" />
     </r-aggregated-table>
 
 @group Reportal Elements
 @element r-aggregated-table
-@demo demo/index.html
+@demo demo/r-aggregated-table.html
 -->
 <dom-module id="r-aggregated-table">
-  <template>
+  <template strip-whitespace>
     <style include="vaadin-grid-icons-fix">
       :host {
         display: block;
         width:100%;
         height:auto;
+        position:relative;
+      }
+      :host::before{
+        content: 'r-aggregated-table';
+        display:none;
+        @apply(--r-aggregated-table-before);
       }
       :host ::content> table{display:none}
       :host r-card {--r-card-content:{padding:0};}
@@ -82,7 +88,6 @@ Example:
         <vaadin-grid id="grid"></vaadin-grid>
       </div>
       <div id="toolbox">
-
         <paper-tooltip for="searchButton">Toggle filter controls</paper-tooltip>
         <paper-icon-button icon="search" id="searchButton" hidden$="[[!filterable]]" on-tap="toggleSearchRow"></paper-icon-button>
 
@@ -98,7 +103,6 @@ Example:
       </div>
     </r-card>
   </template>
-
 </dom-module>
 
 <script>
@@ -118,22 +122,10 @@ Example:
         Polymer.RCardBehavior
       ],
       properties: {
-        selectionMode:{
-          type:String,
-          value: 'disabled'
-        },
         _sortedColumn:{
           type:Number,
           value:null
         },
-        indexed:{
-          type:Boolean,
-          value:false
-        },
-        indexedHeader:{
-          type:String,
-          value:'#'
-        }
       },
 
       _addControls:function(e) {

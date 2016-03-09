@@ -35,15 +35,6 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         value:0
       },
       /**
-       * [See vaadin columns](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html#columns)
-       * @type {Array.<object>} columns The array of columns attached to the grid.
-       * */
-      columns:{
-        type:Array,
-        computed:'_computeColumnAttributes(columnsLegacy,renderer,_sortOrder,indexed)',
-        notify:true
-      },
-      /**
        * the index of the clicked row (incrementation starts from 0). Works if `notifyClick` is specified
        * */
       clickedRow:{
@@ -98,6 +89,16 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           }
         }
       },
+      /**
+       * [See vaadin columns](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html#columns)
+       * @type {Array.<object>} columns The array of columns attached to the grid.
+       * */
+      columns:{
+        type:Array,
+        computed:'_computeColumnAttributes(columnsLegacy,renderer,_sortOrder,indexed)',
+        notify:true
+      },
+
       /**
        * You can specify properties of the columns of the Aggregated table that will be generated. Full list of properties can be seen in [vaadin-grid column spec](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html).
        *```html
@@ -163,6 +164,19 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         type:Object,
         observer:'_voiceControl'
       },
+      indexed:{
+        type:Boolean,
+        value:false
+      },
+      indexedHeader:{
+        type:String,
+        value:'#'
+      },
+      selectionMode:{
+        type:String,
+        value: 'disabled'
+      },
+
       /**
        * Populated by `_computeColumnAttributes`, to generate a proper column toggle list for hidden columns
        * */
@@ -192,32 +206,59 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         type:Array,
         value:[]
       }
+
     },
     /**
      * toggles visibility of a search row (under column headings) that contains inputs to filter data.
      * */
     toggleSearchRow:function(event){
         if(!this._filterRowVisible){
-          this.$.grid.header.addRow();
-          var filterRow = this.$.grid.header.rowCount -1;
-          this.$.grid.header.setRowClassName(filterRow, 'filterRow');
-          console.log(filterRow);
+          this.grid.header.addRow();
+          var filterRow = this.grid.header.rowCount -1;
+          this.grid.header.setRowClassName(filterRow, 'filterRow');
           this.columns.forEach(function(column,index){
             if(column.filterable){
-              var cell = this.$.grid.header.getCell(filterRow, this.indexed?index +1:index);
-              var input = document.createElement('paper-input');
-              input.noLabelFloat = true; input.type='search'; input.style.width='30px'; input.placeholder = 'Filter';
-              input.addEventListener('value-changed', function(){this.filterData()}.bind(this));
-              cell.content = input;
+              var cell = this.grid.header.getCell(filterRow, this.indexed?index +1:index);
+              if(this._elementType && column.type){ //this is a hitlist
+                switch(parseInt(column.type)){
+                  case this._elementType.Single:
+                  case this._elementType.Multi:
+                  case this._elementType.GridElement:
+                  case this._elementType.AdditionalColumn:
+                    cell.content = this._generateDropdownFilter(column);
+                    break;
+                  case this._elementType.Date:
+                    cell.content = this._generateDateFilter(column);
+                    break;
+                  case this._elementType.OpenNumeric:
+                    cell.content = this._generateOpenNumericFilter(column);
+                    break;
+                  case this._elementType.MultiElement:
+                    cell.content = this._generateMultiElementFilter(column);
+                    break;
+                  default:
+                    cell.content = this._generateOpenTextFilter(column);
+                    break;
+                }
+              } else { // this is an aggregated table
+                cell.content = this._generateOpenTextFilter();
+              }
             }
           }.bind(this));
           this._filterRowVisible=true;
 
         } else {
-          this.$.grid.header.removeRow(this.$.grid.header.rowCount - 1);
-          this.$.grid.items = this.data;
+          this.grid.header.removeRow(this.grid.header.rowCount - 1);
+          this.grid.items = this.data;
           this._filterRowVisible=false;
         }
+    },
+
+    _generateOpenTextFilter:function(){
+      var input = document.createElement('paper-input');
+      input.noLabelFloat = true; input.type='search'; input.style.width='30px'; input.placeholder = 'Filter';
+      input.addEventListener('value-changed', function(){this.filterData()}.bind(this));
+      return input
     },
 
     _computeColumnAttributes:function(legacy,renderer,sortOrder,indexed){
@@ -330,10 +371,12 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
      * Reflects columns toggling to vaadin-grid (replaces default column toggler to be able to move the controls into the card drawer). Updates filtered columns if filter row is displayed
      */
     _reflectColumnToggle:function(event){
-      var item=Polymer.dom(event).event.detail.item;
-      var col=parseInt(item.attributes.getNamedItem('value').value);
-      this.$.grid.columns[this.indexed? col +1:col].hidden=item.attributes.getNamedItem('selected')?false:true;
-      this._updateFilteredData(col);
+      if(this.grid){
+        var item=Polymer.dom(event).event.detail.item;
+        var col=parseInt(item.attributes.getNamedItem('value').value);
+        this.grid.columns[this.indexed? col +1:col].hidden=item.attributes.getNamedItem('selected')?false:true;
+        this._updateFilteredData(col);
+      }
     },
     /**
      * Updates data-filtering for columns that had active filters and were hidden/shown
@@ -341,7 +384,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
      * */
     _updateFilteredData:function(index){
       if(this.filterable && this._filterRowVisible && typeof this.filterData ==='function'){
-        if(index){if(this.$.grid.columns[this.indexed? index +1:index].filterable){this.filterData();}} else {this.filterData();}
+        if(index){if(this.grid.columns[this.indexed? index +1:index].filterable){this.filterData();}} else {this.filterData();}
       }
     },
     /**

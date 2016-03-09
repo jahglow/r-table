@@ -1,0 +1,576 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../r-card/r-card-behavior.html">
+<link rel="import" href="../r-card/r-card.html">
+<link rel="import" href="../vaadin-grid/vaadin-grid.html">
+<link rel="import" href="./r-table-behavior.html">
+<link rel="import" href="./vaadin-grid-icons-fix.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-progress/paper-progress.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../iron-page-url/iron-page-url.html">
+<link rel="import" href="../iron-pages/iron-pages.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
+
+
+<!--
+An element to display Reportal HitLits using HitList v2 API.
+It can:
+** accept unlimited levels of nested headers,
+** make columns: sortable, hidable/hidden, filterable;
+** limit the amount of records to be displayed;
+** allow row(s) selection;
+** autocreate row index column;
+** override column headers.
+
+It's based off [`vaadin-grid`](https://github.com/vaadin/vaadin-grid) element by Vaadin team ([Apache 2.0 license](https://github.com/vaadin/vaadin-grid/blob/master/LICENSE)).
+See `vaadin-grid` [API docs](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html) and [Code Examples](https://cdn.vaadin.com/vaadin-elements/latest/vaadin-grid/demo/) to get a deeper insight into its functionality, if you want to modify or extend it.
+
+Example:
+
+    <r-hitlist></r-hitlist>
+
+@group Reportal Elements
+@element r-hitlist
+@demo demo/r-hitlist.html
+-->
+<dom-module id="r-hitlist">
+  <template strip-whitespace>
+    <style include="vaadin-grid-icons-fix">
+      :host{
+        display:block;
+        position:relative;
+      }
+      :host r-card {--r-card-content:{padding:0};}
+      :host::before{
+        content: 'r-hitlist';
+        display:none;
+        @apply(--r-hitlist-before);
+      }
+
+      #columnToggle .dropdown-content paper-icon-item{
+        --paper-item-min-height:32px;
+        cursor: pointer;
+        --paper-item-selected-weight:normal;
+        --paper-icon-item:{font-size:13px;}
+      }
+      #toolbox paper-menu-button{ padding: 8px 0; }
+      #toolbox paper-icon-button{margin: auto 0;}
+      #columnToggle .dropdown-content paper-icon-item ::content iron-icon{opacity: 0}
+      #columnToggle .dropdown-content paper-icon-item[selected] ::content iron-icon{opacity: 1}
+      :host vaadin-grid ::content thead>tr.vaadin-grid-row {height:40px !important}
+      :host vaadin-grid ::content thead>tr.vaadin-grid-row>th {height:40px !important}
+      :host vaadin-grid ::content .filterRow>th> paper-input {
+        --paper-input-container:{padding:0 !important};
+        --paper-input-container-input:{font-size:13px !important};
+        @apply(--layout-flex);
+      }
+      :host vaadin-grid ::content .filterRow>th> paper-input paper-input-container input {
+        font-size:13px !important;
+      }
+
+      :host vaadin-grid ::content .vaadin-grid-sidebar {display:none}
+
+
+      :host div#pagingInfo{padding:0 24px}
+      :host #pagingRow{
+        height:56px;
+        color:rgba(0,0,0,0.54);
+        font-size:12px;
+        font-weight:500;
+        @apply(--layout-horizontal);
+        @apply(--layout-end-justified);
+
+      }
+      :host #pagingRow>*{@apply(--layout-self-center);}
+      :host #pagingRow #pagingForward{margin-right:6px; margin-left:4px}
+      :host #pagingRow #pagingBackward{margin-right:8px;}
+
+      :host paper-progress{
+        --paper-progress-active-color: var(--accent-color,#e91e63);
+        position:absolute;
+        top:0px;
+        width:100%;
+      }
+      #cardsPlaceholder {
+        @apply(--layout-horizontal);
+        @apply(--layout-wrap);
+      }
+    </style>
+    <iron-ajax id="ajax" url="" handle-as="json" last-response="{{lastResponse}}" debounce-duration="300" verbose loading="{{loading}}"></iron-ajax>
+    <iron-page-url query="{{query}}"></iron-page-url>
+    <iron-ajax id="fetchPrecodes" url="" handle-as="json" debounce-duration="100" verbose></iron-ajax>
+
+    <content id="cards" select="template.cards"></content>
+
+    <r-card heading$="[[heading]]" id="card" toolbox assisted$="[[assisted]]">
+      <div class="card-content">
+        <template is="dom-if" if="{{tableView}}" id="hitlistTemplate">
+          <vaadin-grid id="grid" visible-rows="{{visibleRows}}"></vaadin-grid>
+        </template>
+        <div id="cardsPlaceholder" hidden="[[!cardsView]]"></div>
+
+        <div id="pagingRow" hidden$="[[!data.paging]]">
+          <div id="pagingInfo">{{data.pageInfo}} of {{data.length}}</div>
+          <paper-icon-button icon="chevron-left" disabled$="[[data.disablePrevButton]]" id="pagingBackward"></paper-icon-button>
+          <paper-icon-button icon="chevron-right" disabled$="[[data.disableNextButton]]" id="pagingForward"></paper-icon-button>
+        </div>
+        <paper-progress hidden$="[[!loading]]" indeterminate></paper-progress>
+      </div>
+      <div id="toolbox">
+        <paper-tooltip for="searchButton">Toggle filter controls</paper-tooltip>
+        <paper-icon-button icon="search" id="searchButton" hidden$="[[!filterable]]" on-tap="toggleSearchRow"></paper-icon-button>
+
+        <paper-tooltip for="viewToggle" position="bottom">Switch display mode</paper-tooltip>
+        <paper-menu-button  horizontal-align="right" vertical-offset="52">
+          <paper-icon-button icon="chrome-reader-mode" class="dropdown-trigger" id="viewToggle"></paper-icon-button>
+          <paper-listbox id="viewList" selected-attribute="selected" attr-for-selected="view" selected="{{defaultView}}" class="dropdown-content">
+            <template is="dom-repeat" items="[[views]]" as="view">
+              <paper-icon-item view="[[view.view]]"><iron-icon icon="[[view.icon]]" item-icon></iron-icon><paper-item-body>[[view.label]]</paper-item-body></paper-icon-item>
+            </template>
+          </paper-listbox>
+        </paper-menu-button>
+
+        <paper-tooltip for="colTrigger" position="bottom" offset="0">Toggle columns visibility</paper-tooltip>
+        <paper-menu-button horizontal-align="right" vertical-offset="52" id="columnToggle" ignore-select>
+          <paper-icon-button icon="view-column" class="dropdown-trigger" id="colTrigger"></paper-icon-button>
+          <paper-listbox selected-attribute="selected" multi class="dropdown-content" attr-for-selected="value">
+            <template is="dom-repeat" items="[[_hidableColumns]]" as="column">
+              <paper-icon-item value$="[[column.colIndex]]"><iron-icon icon="check" item-icon></iron-icon>[[column.hidingToggleText]]</paper-icon-item>
+            </template>
+          </paper-listbox>
+        </paper-menu-button>
+      </div>
+    </r-card>
+
+    <template id="filterDropdownTemplate">
+      <paper-dropdown-menu no-label-float placeholder="Filter" toggles>
+        <paper-listbox class="dropdown-content" attr-for-selected="value">
+          <paper-item></paper-item>
+        </paper-listbox>
+      </paper-dropdown-menu>
+    </template>
+  </template>
+
+</dom-module>
+
+<script>
+  (function() {
+    'use strict';
+    HTMLImports.whenReady(function() {
+      Polymer({
+        is: 'r-hitlist',
+        listeners:{
+          'viewList.iron-select':'switchViews',
+          'hitlistTemplate.dom-change':'_renderHitlist',
+          'cards-view-changed':'renderCards'
+        },
+
+        behaviors: [
+          Polymer.IronResizableBehavior,
+          Polymer.RTableBehavior,
+          Polymer.Templatizer
+        ],
+
+        properties: {
+          /**
+           * type of DataBase `(Production|TestData)`
+           * */
+          dbType:{
+            type:String,
+            value:'Production' // Production/TestData
+          },
+          /**
+           * Current language as Confirmit language code
+           * */
+          language:{
+            type:Number,
+            value:'9'
+          },
+          /**
+           * ID of the HitList component
+           * */
+          hitlist:String,
+          /**
+           * URL query as an object, where keys are in lower-case
+           * */
+          queryNormalized:{
+            type:Object,
+            computed:'_parseQuery(query)'
+          },
+
+          query:{
+            type:String,
+            //observer:'_parseQuery'
+          },
+          /**
+           * Comma-separated string listing indices (starting with 1) of columns containing long text. These are trimmed with ellipsis.
+           * */
+          longText:String,
+          /**
+           * Max-width of a long-text column. As a shorthand to specifying a maxWidth in the column's properties.
+           * */
+          longTextWidth:{
+            type:Number,
+            value:250
+          },
+          /**
+           * Status of fetching data from server
+           * */
+          loading:{
+            type:Boolean,
+            value:false,
+            notify:true
+          },
+          previousSort:{
+            type:Object
+          },
+          /**
+           * Views available to present data in (table|cards|map)
+           * */
+          views:{
+            type:Array,
+            value: [
+              {view:'table',label:'Table',icon:'view-list'},
+              {view:'cards',label:'Cards',icon:'view-module'},
+              {view:'map',label:'Map',icon:'room'}
+            ]
+          },
+          /**
+           * Data-represenation mode that the user sees on initial element load
+           * */
+          defaultView:{
+            type:String,
+            value:'table'
+          },
+          /**
+           * Object containing last set of data from the server
+           * */
+          lastResponse:{
+            type:Object,
+            observer:'parseResponse'
+          },
+          /**
+           * aggregated data for the HitList
+           * */
+          /*hitlistData:{
+           type:Object,
+           value:{data:[]},
+           notify:true
+           },*/
+          data:{
+            type:Object,
+            value:{data:[]},
+            notify:true
+          },
+          _elementsState:{
+            type:Object,
+            value:function(){
+              return {
+                grid:undefined
+              }
+            }
+          },
+          /**
+           * type of column data for HitList, defined as `type` in `columns` properties
+           * */
+          _elementType:{
+            type:Object,
+            value:function(){
+              return {
+                "Date":0,
+                "OpenText":1,
+                "OpenNumeric":2,
+                "Single":3,
+                "Multi":4,
+                "MultiElement":5,
+                "GridElement":6,
+                "SurveyLink":7,
+                "NotSupported":8,
+                "AdditionalColumn":9,
+                "Geography":10,
+                "ImageUpload":11
+              }
+            }
+          },
+          _searchValues:{
+            type:Array,
+            value: []
+          }
+
+        },
+        ready:function(){
+          console.log('ready');
+          /*get first data*/
+          this.requestResponse({initialLoad:true});
+          /* setup actions on paging Buttons*/
+          this.$.pagingForward.addEventListener('tap',function(){this._skipPage(true)}.bind(this));
+          this.$.pagingBackward.addEventListener('tap',function(){this._skipPage(false)}.bind(this));
+
+          /*grid.items = function(params,callback){
+           console.log(params);
+           if(!this.$.ajax.loading){
+           if(!this.lastResponse){this.requestResponse({initialLoad:1})} else if(!this.lastResponse.sortingPagingValues.disableNextButton){
+           this._skipPage(true);
+           }
+           }
+           this.$.ajax.removeEventListener('last-response-changed');
+           this.$.ajax.addEventListener('last-response-changed',function() {
+           console.log('response received');
+           console.log(this.lastResponse);
+           callback(this.lastResponse.data);
+           }.bind(this))
+           //console.log(params);
+           }.bind(this);*/
+          //this.requestResponse();
+
+
+        },
+
+
+
+        _generateDropdownFilter:function(column){
+          console.log(column);
+          this.templatize(this.$.filterDropdownTemplate);
+          var dropdown = this.stamp({});
+          dropdown.root.querySelector('paper-dropdown-menu').addEventListener('paper-dropdown-open', function(e){this._fetchItems(e,column.name)}.bind(this));
+          dropdown.root.querySelector('paper-listbox').addEventListener('iron-select', function(e){this.filterData(e)}.bind(this));
+          var span = document.createElement('span');
+          Polymer.dom(span).appendChild(dropdown.root);
+          return span;
+        },
+        _generateDateFilter:function(){},
+        _generateOpenNumericFilter:function(){},
+        _generateMultiElementFilter:function(){},
+        /**
+         * Fetches precodes for autocomplete dropdowns from server. If items had been fetched, they're taken from element's 'cache'
+         * */
+        _fetchItems:function(event,name){
+          console.log('will fetch items');
+          console.log(Polymer.dom(event).rootTarget);
+          var ajax = this.$.fetchPrecodes;
+          ajax.url='/reportal/AutoComplete.aspx';
+          ajax.handleAs='json';
+          ajax.params={
+            ac_sv:'__all__',
+            ac_ct: 'hitlistcriteria;'+this.hitlist+';'+name,
+            ac_pn: location.pathname,
+            ac_itd: 50,
+            ac_ipp: 50
+          };
+          if(this.queryNormalized){
+            var q = this.queryNormalized;
+            ajax.params.ReportId = q.reportid;
+            ajax.params.Preview = q.preview;
+            ajax.params.PageId = q.pageid;
+          }
+          console.log(ajax.params);
+          ajax.addEventListener('response', function(e){
+            console.log(Polymer.dom(event).rootTarget);
+            console.log(Polymer.dom(e));
+          });
+          ajax.generateRequest();
+        },
+
+        _renderHitlist:function(){
+          if(this.$$('#grid')){
+            console.log('render hitlist');
+            //this.async(function(){
+            this.grid= this.grid || this.$$('#grid');
+            if(this.grid.columns.length===0){
+              /*generate columns*/
+              var longText=this.longText && this.longText.length>0?this.longText.toString().split(',').map(function(i){return parseInt(i)}):[];//convert longText string to array
+              this.columns.forEach(function(item,index){
+                //if(item.renderer && this.renderer.hasOwnProperty(item.renderer)){item.renderer=this.renderer[item.renderer];}//convert renderer string to function from functions list
+                if(longText.length>0 && longText.indexOf(index+1)!=-1){item.maxWidth = parseInt(this.longTextWidth);}
+                this.grid.addColumn(item);
+                this.grid.header.getCell(0,index).content = item.hidingToggleText; //replace header content with proper title
+              }.bind(this));
+              this.set('data.columns',this.columns);
+              this.grid.frozenColumns = this.frozenColumns;
+              this.grid.addEventListener('sort-order-changed',function(e){this._sortChange(e)}.bind(this));
+              if(this.data.data.length>0){
+                this.grid.items = this.data.data;
+                this.grid.size=this.data.data.length;
+                if(!this.visibleRows || (this.visibleRows && this.visibleRows>this.data.data.length)){this.grid.visibleRows=this.data.data.length} else if(this.visibleRows){this.grid.visibleRows=this.visibleRows;}
+              }
+              /*sorting applied*/
+              if(this.data.sorting.length>0){this.grid.sortOrder = this._sortOrder};
+            }
+            //})
+
+          }
+        },
+
+        switchViews:function(e){
+          this.views.forEach(function(item){
+            this[item.view+'View'] = item.view===Polymer.dom(e).event.detail.item.view;
+          }.bind(this));
+        },
+        /**
+         * Converts all params from query into an object with lower-case keys
+         * @method _parseQuery
+         * @param {String} query received from `<iron-page-url>`
+         * @return {Object}
+         * */
+        _parseQuery:function(query){
+          if(query && query.length>0){
+            var q=query.split('&'), ql= q.length, qn={};
+            while(ql--){ var qp = q[ql].split('='); qn[qp[0].toLowerCase()]=qp[1]; }
+          }
+          return qn;
+        },
+        requestResponse:function(options){
+          var o= this.queryNormalized;
+          if(o && o.reportid && this.hitlist){
+            if (!o.pageid && document.querySelector('#CurrentPageID')) {
+              o.pageid=document.querySelector('#CurrentPageID').value;
+            }
+            var _basePath = 'https://reportal.euro.confirmit.com/reportal/Report/'+ o.reportid + '/HitList/' + this.hitlist;
+            /*set common params*/
+            var params = {PageId: o.pageid, Preview: o.preview, Language:this.language, DbType:this.dbType};
+            /*if options are passed, add options*/
+            if(options && typeof options === Object){ console.log(options);
+              for (var attrname in options) {
+                params[attrname] = typeof options[attrname]==='boolean'?(options[attrname]?'1':'0'):options[attrname];
+              }
+            }
+            if (document.querySelector('#PageStateId')) {
+              params.pageStateId=document.querySelector('#PageStateId').value;
+            }
+            var sortingPagingValues = this.sortingPagingValues || {};
+
+            if (options && options.initialLoad === true && this.$$('#cardsPlaceholder')) {
+              this.$$('#cardsPlaceholder').innerHTML = '';
+            }
+            if (sortingPagingValues && sortingPagingValues.pagingValues && !isNaN(sortingPagingValues.pagingValues.pageNumber)) {
+              if (options && options.initialLoad === true) {
+                sortingPagingValues.pagingValues = null;
+              } else {
+                sortingPagingValues.pagingValues.pageNumber += sortingPagingValues.pagingValues.pagingForward ? 1 : -1;
+              }
+            }
+            params.sortingPagingValues=JSON.stringify(sortingPagingValues);
+            this.$.ajax.url = _basePath;
+            this.$.ajax.params = params;
+            this.$.ajax.method="GET";
+            this.$.ajax.generateRequest();
+          }
+        },
+        parseResponse:function(r){
+          console.log(r);
+          r.sortingPagingValues.pagingValues.firstStartValue = this._fixJsonDate(r.sortingPagingValues.pagingValues.firstStartValue);
+          r.sortingPagingValues.pagingValues.lastStartValue = this._fixJsonDate(r.sortingPagingValues.pagingValues.lastStartValue);
+          this.sortingPagingValues=r.sortingPagingValues;
+          var sortBy = r.sortingPagingValues.sortingValues.sortBy;
+          for(var s in sortBy){
+            var column = this.columns.map(function(col){return col.name}).indexOf(s);
+            var direction = sortBy[s]===-1?'desc':'asc';
+            if(column>=0){this._sortOrder.push({column:column,direction:direction})};
+          }
+          this.previousSort=this._sortOrder[0]; //store for comparing sorting in _sortChange
+          this.set('data.data', r.data);
+          this.set('data.sorting', this._sortOrder);
+          this.set('data.paging', r.sortingPagingValues.pagingValues);
+          this.set('data.disablePrevButton', r.sortingPagingValues.disablePrevButton);
+          this.set('data.disableNextButton', r.sortingPagingValues.disableNextButton);
+          this.set('data.length',r.sortingPagingValues.totalHits);
+          this.set('data.pageInfo', r.pageInfo);
+          this.async(function(){
+            if(this.tableView && this.$$('#grid')){
+              var grid = this.$$('#grid');
+              grid.items = r.data;
+              grid.size=r.data.length;
+              grid.refreshItems();
+              if(!this.visibleRows || (this.visibleRows && this.visibleRows>r.data.length)){grid.visibleRows=r.data.length} else if(this.visibleRows){grid.visibleRows=this.visibleRows;}
+              grid.then(function(){this.notifyResize()}.bind(this));
+            }
+            if(this.cardsView && this.$$('#cardsPlaceholder')){
+              this.renderCards();
+            }
+
+          });
+
+        },
+        renderCards:function(){
+          console.log('open')
+          this.async(function(){
+            /*update template cards or whatever*/
+            if(this.$$('#cardsPlaceholder') && this.data && this.data.data){
+              var template = Polymer.dom(this.$.cards).getDistributedNodes()[0];
+              if(template){
+                this.$$('#cardsPlaceholder').innerHTML='';
+                this.templatize(template);
+                var hlData = JSON.parse(JSON.stringify(this.data.data));
+                hlData.forEach(function(item){
+                  for(var key in item){
+                    var val = item[key];
+                    var title = this.columns.filter(function(col){return col.name===key});
+                    if(val && title && title.length>0){
+                      item[key] = {title: title[0].hidingToggleText, content: val}
+                    }
+                  }
+                  var clone = this.stamp({});
+                  clone.card = item;
+                  Polymer.dom(this.$$('#cardsPlaceholder')).appendChild(clone.root);
+                }.bind(this));
+                /*see if cards have tabs and select first*/
+                var cardTabs = this.$$('#cardsPlaceholder').querySelectorAll('paper-tabs');
+                if(cardTabs.length>0){
+                  [].slice.call(cardTabs).forEach(function(item){item.selected=0});
+                  var ironPages = this.$$('#cardsPlaceholder').querySelectorAll('iron-pages>*:first-child>template');
+                  [].slice.call(ironPages).forEach(function(item){item.if=true});
+                }
+                this.updateStyles();
+                this.notifyResize()
+              }
+            }
+          })
+        },
+        _skipPage: function(pagingForward, callback){
+          var spv = this.sortingPagingValues.pagingValues;
+          spv.pagingForward = pagingForward; /*if forward is needed then pass true, else null - backward*/
+          spv.startId = pagingForward ? spv.lastStartId : spv.firstStartId;
+          spv.startValue = pagingForward ? spv.lastStartValue : spv.firstStartValue;
+          this.requestResponse({isPaging: true}, callback);
+        },
+        _sortChange:function(event){
+          if(!this.previousSort || (this.previousSort && (this.previousSort.column !== Polymer.dom(event).event.detail.value[0].column || this.previousSort.direction !== Polymer.dom(event).event.detail.value[0].direction))){
+            if (this.loading){return;}
+            this.sortingPagingValues.sortingValues.sortBy={};
+            this.sortingPagingValues.sortingValues.sortBy[this.columns[Polymer.dom(event).event.detail.value[0].column].name]=Polymer.dom(event).event.detail.value[0].direction==='asc'?1:-1;
+            this._clearPaging();
+            this.requestResponse({
+              isSorting: true,
+              initialLoad: true
+            });
+          }
+        },
+        _clearPaging: function() {
+          this.sortingPagingValues.pagingValues = null;
+        },
+        _fixJsonDate: function(jsonDate) {
+          if (!(jsonDate && Y.Lang.isFunction(jsonDate.replace))) {return jsonDate;}
+          var constructor = jsonDate.replace(new RegExp("^/Date\\(([-+]?\\d+)\\)/$"), "new Date($1)");
+          if (constructor == jsonDate) {return jsonDate;}
+          return eval(constructor);
+        },
+        filterData:function(){}
+
+
+      });
+    });
+
+  })();
+</script>
