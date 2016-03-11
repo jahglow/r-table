@@ -21,154 +21,153 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../iron-page-url/iron-page-url.html">
 <link rel="import" href="../iron-pages/iron-pages.html">
 <link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
-<link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../r-dropdown/r-dropdown.html">
 
 
 <!--
 An element to display Reportal HitLits using HitList v2 API.
 It can:
-** accept unlimited levels of nested headers,
-** make columns: sortable, hidable/hidden, filterable;
+** make columns: sortable, hidable/hidden, filterable, pinned;
 ** limit the amount of records to be displayed;
 ** allow row(s) selection;
-** autocreate row index column;
 ** override column headers.
 
 It's based off [`vaadin-grid`](https://github.com/vaadin/vaadin-grid) element by Vaadin team ([Apache 2.0 license](https://github.com/vaadin/vaadin-grid/blob/master/LICENSE)).
 See `vaadin-grid` [API docs](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html) and [Code Examples](https://cdn.vaadin.com/vaadin-elements/latest/vaadin-grid/demo/) to get a deeper insight into its functionality, if you want to modify or extend it.
 
 Example:
-
+```html
     <r-hitlist></r-hitlist>
-
+```
 @group Reportal Elements
 @element r-hitlist
 @demo demo/r-hitlist.html
 -->
 <dom-module id="r-hitlist">
-  <template strip-whitespace>
-    <style include="vaadin-grid-icons-fix">
-      :host{
-        display:block;
-        position:relative;
-      }
-      :host r-card {--r-card-content:{padding:0};}
-      :host::before{
-        content: 'r-hitlist';
-        display:none;
-        @apply(--r-hitlist-before);
-      }
+  <dom-module id="r-hitlist">
+    <template strip-whitespace>
+      <style include="vaadin-grid-icons-fix">
+        :host{
+          display:block;
+          position:relative;
+        }
+        :host r-card {--r-card-content:{padding:0};}
+        :host::before{
+          content: 'r-hitlist';
+          display:none;
+          @apply(--r-hitlist-before);
+        }
 
-      #columnToggle .dropdown-content paper-icon-item{
-        --paper-item-min-height:32px;
-        cursor: pointer;
-        --paper-item-selected-weight:normal;
-        --paper-icon-item:{font-size:13px;}
-      }
-      #toolbox paper-menu-button{ padding: 8px 0; }
-      #toolbox paper-icon-button{margin: auto 0;}
-      #columnToggle .dropdown-content paper-icon-item ::content iron-icon{opacity: 0}
-      #columnToggle .dropdown-content paper-icon-item[selected] ::content iron-icon{opacity: 1}
-      :host vaadin-grid ::content thead>tr.vaadin-grid-row {height:40px !important}
-      :host vaadin-grid ::content thead>tr.vaadin-grid-row>th {height:40px !important}
-      :host vaadin-grid ::content .filterRow>th> paper-input {
-        --paper-input-container:{padding:0 !important};
-        --paper-input-container-input:{font-size:13px !important};
-        @apply(--layout-flex);
-      }
-      :host vaadin-grid ::content .filterRow>th> paper-input paper-input-container input {
-        font-size:13px !important;
-      }
+        #columnToggle .dropdown-content paper-icon-item{
+          --paper-item-min-height:32px;
+          cursor: pointer;
+          --paper-item-selected-weight:normal;
+          --paper-icon-item:{font-size:13px;}
+        }
+        #toolbox paper-menu-button{ padding: 8px 0; }
+        #toolbox paper-icon-button{margin: auto 0;}
+        #columnToggle .dropdown-content paper-icon-item ::content iron-icon{opacity: 0}
+        #columnToggle .dropdown-content paper-icon-item[selected] ::content iron-icon{opacity: 1}
+        :host vaadin-grid ::content thead>tr.vaadin-grid-row {height:40px !important}
+        :host vaadin-grid ::content thead>tr.vaadin-grid-row>th {height:40px !important}
+        :host vaadin-grid ::content .filterRow>th> paper-input {
+          --paper-input-container:{padding:0 !important};
+          --paper-input-container-input:{font-size:13px !important};
+          @apply(--layout-flex);
+        }
+        :host vaadin-grid ::content .filterRow>th> paper-input paper-input-container input {
+          font-size:13px !important;
+        }
 
-      :host vaadin-grid ::content .vaadin-grid-sidebar {display:none}
+        :host vaadin-grid ::content .vaadin-grid-sidebar {display:none}
 
 
-      :host div#pagingInfo{padding:0 24px}
-      :host #pagingRow{
-        height:56px;
-        color:rgba(0,0,0,0.54);
-        font-size:12px;
-        font-weight:500;
-        @apply(--layout-horizontal);
-        @apply(--layout-end-justified);
+        :host div#pagingInfo{padding:0 24px}
+        :host #pagingRow{
+          height:56px;
+          color:rgba(0,0,0,0.54);
+          font-size:12px;
+          font-weight:500;
+          @apply(--layout-horizontal);
+          @apply(--layout-end-justified);
 
-      }
-      :host #pagingRow>*{@apply(--layout-self-center);}
-      :host #pagingRow #pagingForward{margin-right:6px; margin-left:4px}
-      :host #pagingRow #pagingBackward{margin-right:8px;}
+        }
+        :host #pagingRow>*{@apply(--layout-self-center);}
+        :host #pagingRow #pagingForward{margin-right:6px; margin-left:4px}
+        :host #pagingRow #pagingBackward{margin-right:8px;}
 
-      :host paper-progress{
-        --paper-progress-active-color: var(--accent-color,#e91e63);
-        position:absolute;
-        top:0px;
-        width:100%;
-      }
-      #cardsPlaceholder {
-        @apply(--layout-horizontal);
-        @apply(--layout-wrap);
-      }
-    </style>
-    <iron-ajax id="ajax" url="" handle-as="json" last-response="{{lastResponse}}" debounce-duration="300" verbose loading="{{loading}}"></iron-ajax>
-    <iron-page-url query="{{query}}"></iron-page-url>
-    <iron-ajax id="fetchPrecodes" url="" handle-as="json" debounce-duration="100" verbose></iron-ajax>
+        :host paper-progress{
+          --paper-progress-active-color: var(--accent-color,#e91e63);
+          position:absolute;
+          top:0px;
+          width:100%;
+        }
+        #cardsPlaceholder {
+          @apply(--layout-horizontal);
+          @apply(--layout-wrap);
+        }
+      </style>
+      <iron-ajax id="ajax" url="" handle-as="json" last-response="{{lastResponse}}" verbose loading="{{loading}}"></iron-ajax>
+      <iron-page-url query="{{query}}"></iron-page-url>
 
-    <content id="cards" select="template.cards"></content>
+      <content id="cards" select="template.cards"></content>
 
-    <r-card heading$="[[heading]]" id="card" toolbox assisted$="[[assisted]]">
-      <div class="card-content">
-        <template is="dom-if" if="{{tableView}}" id="hitlistTemplate">
-          <vaadin-grid id="grid" visible-rows="{{visibleRows}}"></vaadin-grid>
-        </template>
-        <div id="cardsPlaceholder" hidden="[[!cardsView]]"></div>
+      <r-card heading$="[[heading]]" id="card" toolbox assisted$="[[assisted]]">
+        <div class="card-content">
+          <template is="dom-if" if="{{tableView}}" id="hitlistTemplate">
+            <vaadin-grid id="grid" visible-rows="{{visibleRows}}"></vaadin-grid>
+          </template>
+          <div id="cardsPlaceholder" hidden="[[!cardsView]]"></div>
 
-        <div id="pagingRow" hidden$="[[!data.paging]]">
-          <div id="pagingInfo">{{data.pageInfo}} of {{data.length}}</div>
-          <paper-icon-button icon="chevron-left" disabled$="[[data.disablePrevButton]]" id="pagingBackward"></paper-icon-button>
-          <paper-icon-button icon="chevron-right" disabled$="[[data.disableNextButton]]" id="pagingForward"></paper-icon-button>
+          <div id="pagingRow" hidden$="[[!data.paging]]">
+            <div id="pagingInfo">{{data.pageInfo}} of {{data.length}}</div>
+            <paper-icon-button icon="chevron-left" disabled$="[[data.disablePrevButton]]" id="pagingBackward"></paper-icon-button>
+            <paper-icon-button icon="chevron-right" disabled$="[[data.disableNextButton]]" id="pagingForward"></paper-icon-button>
+          </div>
+          <paper-progress hidden$="[[!loading]]" indeterminate></paper-progress>
         </div>
-        <paper-progress hidden$="[[!loading]]" indeterminate></paper-progress>
-      </div>
-      <div id="toolbox">
-        <paper-tooltip for="searchButton">Toggle filter controls</paper-tooltip>
-        <paper-icon-button icon="search" id="searchButton" hidden$="[[!filterable]]" on-tap="toggleSearchRow"></paper-icon-button>
+        <div id="toolbox">
+          <paper-tooltip for="searchButton">Toggle filter controls</paper-tooltip>
+          <paper-icon-button icon="search" id="searchButton" hidden$="[[!filterable]]" on-tap="toggleSearchRow"></paper-icon-button>
 
-        <paper-tooltip for="viewToggle" position="bottom">Switch display mode</paper-tooltip>
-        <paper-menu-button  horizontal-align="right" vertical-offset="52">
-          <paper-icon-button icon="chrome-reader-mode" class="dropdown-trigger" id="viewToggle"></paper-icon-button>
-          <paper-listbox id="viewList" selected-attribute="selected" attr-for-selected="view" selected="{{defaultView}}" class="dropdown-content">
-            <template is="dom-repeat" items="[[views]]" as="view">
-              <paper-icon-item view="[[view.view]]"><iron-icon icon="[[view.icon]]" item-icon></iron-icon><paper-item-body>[[view.label]]</paper-item-body></paper-icon-item>
+          <paper-tooltip for="viewToggle" position="bottom">Switch display mode</paper-tooltip>
+          <paper-menu-button  horizontal-align="right" vertical-offset="52">
+            <paper-icon-button icon="chrome-reader-mode" class="dropdown-trigger" id="viewToggle"></paper-icon-button>
+            <paper-listbox id="viewList" selected-attribute="selected" attr-for-selected="view" selected="{{defaultView}}" class="dropdown-content">
+              <template is="dom-repeat" items="[[views]]" as="view">
+                <paper-icon-item view="[[view.view]]"><iron-icon icon="[[view.icon]]" item-icon></iron-icon><paper-item-body>[[view.label]]</paper-item-body></paper-icon-item>
+              </template>
+            </paper-listbox>
+          </paper-menu-button>
+
+          <paper-tooltip for="colTrigger" position="bottom" offset="0">Toggle columns visibility</paper-tooltip>
+          <paper-menu-button horizontal-align="right" vertical-offset="52" id="columnToggle" ignore-select>
+            <paper-icon-button icon="view-column" class="dropdown-trigger" id="colTrigger"></paper-icon-button>
+            <paper-listbox selected-attribute="selected" multi class="dropdown-content" attr-for-selected="value">
+              <template is="dom-repeat" items="[[_hidableColumns]]" as="column">
+                <paper-icon-item value$="[[column.colIndex]]"><iron-icon icon="check" item-icon></iron-icon>[[column.hidingToggleText]]</paper-icon-item>
+              </template>
+            </paper-listbox>
+          </paper-menu-button>
+        </div>
+      </r-card>
+
+      <template id="filterDropdownTemplate">
+        <paper-dropdown-menu no-label-float placeholder="Filter">
+          <paper-listbox class="dropdown-content" attr-for-selected="value">
+            <template is="dom-repeat" items="[[items]]">
+              <paper-item value="[[item.ID]]">[[item.Title]]</paper-item>
             </template>
           </paper-listbox>
-        </paper-menu-button>
+        </paper-dropdown-menu>
+      </template>
 
-        <paper-tooltip for="colTrigger" position="bottom" offset="0">Toggle columns visibility</paper-tooltip>
-        <paper-menu-button horizontal-align="right" vertical-offset="52" id="columnToggle" ignore-select>
-          <paper-icon-button icon="view-column" class="dropdown-trigger" id="colTrigger"></paper-icon-button>
-          <paper-listbox selected-attribute="selected" multi class="dropdown-content" attr-for-selected="value">
-            <template is="dom-repeat" items="[[_hidableColumns]]" as="column">
-              <paper-icon-item value$="[[column.colIndex]]"><iron-icon icon="check" item-icon></iron-icon>[[column.hidingToggleText]]</paper-icon-item>
-            </template>
-          </paper-listbox>
-        </paper-menu-button>
-      </div>
-    </r-card>
-
-    <template id="filterDropdownTemplate">
-      <paper-dropdown-menu no-label-float placeholder="Filter" toggles>
-        <paper-listbox class="dropdown-content" attr-for-selected="value">
-          <paper-item></paper-item>
-        </paper-listbox>
-      </paper-dropdown-menu>
     </template>
-  </template>
+  </dom-module>
 
-</dom-module>
-
-<script>
-  (function() {
-    'use strict';
-    HTMLImports.whenReady(function() {
+  <script>
+    (function() {
+      'use strict';
       Polymer({
         is: 'r-hitlist',
         listeners:{
@@ -259,7 +258,7 @@ Example:
            * */
           lastResponse:{
             type:Object,
-            observer:'parseResponse'
+            observer:'_routeResponse'
           },
           /**
            * aggregated data for the HitList
@@ -307,6 +306,10 @@ Example:
           _searchValues:{
             type:Array,
             value: []
+          },
+          _resolveAutocomplete:{
+            type:Function,
+            value:function(){}
           }
 
         },
@@ -337,50 +340,76 @@ Example:
 
 
         },
-
-
-
+        /* If response is Array, it was requested by Autocomplete for column filters, else it's HitList data*/
+        _routeResponse:function(response){
+          if(response){
+            if(response.hasOwnProperty('ResultSet')){
+              this._resolveAutocomplete(response);
+            } else {
+              this.parseResponse(response);
+            }
+          }
+        },
         _generateDropdownFilter:function(column){
-          console.log(column);
-          this.templatize(this.$.filterDropdownTemplate);
-          var dropdown = this.stamp({});
-          dropdown.root.querySelector('paper-dropdown-menu').addEventListener('paper-dropdown-open', function(e){this._fetchItems(e,column.name)}.bind(this));
-          dropdown.root.querySelector('paper-listbox').addEventListener('iron-select', function(e){this.filterData(e)}.bind(this));
-          var span = document.createElement('span');
-          Polymer.dom(span).appendChild(dropdown.root);
-          return span;
+          var dd = document.createElement('r-dropdown');
+          dd.noLabelFloat=true; dd.placeholder='Filter';
+          dd.addEventListener('tap',function(e){this._populateDropdownFilter(e,column);}.bind(this));
+          return dd;
+        },
+        _populateDropdownFilter:function(event,column){
+          console.log(column); console.log(event);
+          if(Polymer.dom(Polymer.dom(event).rootTarget).children.length===0){
+            this._fetchItems(column.name)
+                    .then(function(response){
+                      var listbox = document.createElement('paper-listbox');
+                      listbox.classList.add('dropdown-content');
+                      listbox.attrForSelected='value';
+                      response.ResultSet.Result.forEach(function(item){
+                        var li=document.createElement('paper-item');
+                        Polymer.dom(li).setAttribute('value',item.Value);
+                        li.textContent = item.Text;
+                        Polymer.dom(listbox).appendChild(li);
+                      });
+                      Polymer.dom(event).rootTarget.appendChild(listbox);
+                      Polymer.dom(event).rootTarget.open();
+                    }.bind(this));
+            //dropdown.root.querySelector('paper-dropdown-menu').addEventListener('paper-dropdown-open', function(e){this._fetchItems(e,column.name)}.bind(this));
+            //dropdown.root.querySelector('paper-listbox').addEventListener('iron-select', function(e){this.filterData(e)}.bind(this));
+          }
         },
         _generateDateFilter:function(){},
         _generateOpenNumericFilter:function(){},
         _generateMultiElementFilter:function(){},
         /**
-         * Fetches precodes for autocomplete dropdowns from server. If items had been fetched, they're taken from element's 'cache'
+         * Fetches precodes for autocomplete dropdowns from server. On resolve returns the `iron-ajax` `response` `Event`
+         * @method _fetchItems
+         * @param {String} name question ID in the column
+         * @return {Promise}
          * */
-        _fetchItems:function(event,name){
-          console.log('will fetch items');
-          console.log(Polymer.dom(event).rootTarget);
-          var ajax = this.$.fetchPrecodes;
-          ajax.url='/reportal/AutoComplete.aspx';
-          ajax.handleAs='json';
-          ajax.params={
-            ac_sv:'__all__',
-            ac_ct: 'hitlistcriteria;'+this.hitlist+';'+name,
-            ac_pn: location.pathname,
-            ac_itd: 50,
-            ac_ipp: 50
-          };
-          if(this.queryNormalized){
-            var q = this.queryNormalized;
-            ajax.params.ReportId = q.reportid;
-            ajax.params.Preview = q.preview;
-            ajax.params.PageId = q.pageid;
-          }
-          console.log(ajax.params);
-          ajax.addEventListener('response', function(e){
-            console.log(Polymer.dom(event).rootTarget);
-            console.log(Polymer.dom(e));
-          });
-          ajax.generateRequest();
+        _fetchItems:function(name){
+          return new Promise(function(resolve,reject){
+            this._resolveAutocomplete = resolve;
+            console.log('will fetch items');
+            var ajax = this.$.ajax;
+            ajax.url='/reportal/AutoComplete.aspx';
+            ajax.handleAs='json';
+            ajax.params={
+              ac_sv:'__all__',
+              ac_ct: 'hitlistcriteria;'+this.hitlist+';'+name,
+              ac_pn: location.pathname,
+              ac_itd: 50,
+              ac_ipp: 50
+            };
+            if(this.queryNormalized){
+              var q = this.queryNormalized;
+              ajax.params.ReportId = q.reportid;
+              ajax.params.Preview = q.preview;
+              ajax.params.PageId = q.pageid;
+            }
+            console.log(ajax.params);
+            //ajax.addEventListener('response', resolve);
+            ajax.generateRequest();
+          }.bind(this));
         },
 
         _renderHitlist:function(){
@@ -570,7 +599,6 @@ Example:
 
 
       });
-    });
 
-  })();
-</script>
+    })();
+  </script>
