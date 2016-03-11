@@ -333,11 +333,11 @@ Example:
         /** if one filter is cleared, there might be other filters that contain data. If so, we need to filter against those*/
         this.debounce('columnFilter',function(){
           var filterable = this.columns.filter(function(col){return col.filterable && !col.hidden}).map(function(col){return this.indexed?col.colIndex +1 :col.colIndex}.bind(this));
-                  this.$.grid.items = this.data;
+                  this.grid.items = this.data;
                   filterable.forEach(function(col){
-                    var cell = this.$.grid.header.getCell(this.$.grid.header.rowCount -1, col);
+                    var cell = this.grid.header.getCell(this.grid.header.rowCount -1, col);
                     if(cell.content.value.length>0){
-                      this.$.grid.items = this.$.grid.items.filter(function(item){ return (item[col].toString().toLowerCase()).indexOf(cell.content.value) != -1});
+                      this.grid.items = this.grid.items.filter(function(item){ return (item[col].toString().toLowerCase()).indexOf(cell.content.value) != -1});
                     }
                     //this.$.grid.size = this.$.grid.items.length;
                   }.bind(this));

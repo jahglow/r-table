@@ -58,11 +58,15 @@ Example:
           @apply(--r-hitlist-before);
         }
 
-        #columnToggle .dropdown-content paper-icon-item{
+        #columnToggle .dropdown-content paper-icon-item,
+        vaadin-grid ::content  r-dropdown .dropdown-content paper-icon-item,
+        vaadin-grid ::content  r-dropdown .dropdown-content paper-item{
           --paper-item-min-height:32px;
+          min-height:32px !important;
           cursor: pointer;
           --paper-item-selected-weight:normal;
-          --paper-icon-item:{font-size:13px;}
+          --paper-icon-item:{font-size:13px;};
+          --paper-item:{font-size:13px;};
         }
         #toolbox paper-menu-button{ padding: 8px 0; }
         #toolbox paper-icon-button{margin: auto 0;}
@@ -76,6 +80,13 @@ Example:
           @apply(--layout-flex);
         }
         :host vaadin-grid ::content .filterRow>th> paper-input paper-input-container input {
+          font-size:13px !important;
+        }
+        :host vaadin-grid ::content .filterRow>th> r-dropdown {
+          --paper-input-container-input:{font-size:13px !important};
+          @apply(--layout-flex);
+        }
+        :host vaadin-grid ::content .filterRow>th> r-dropdown paper-input paper-input-container input {
           font-size:13px !important;
         }
 
@@ -152,15 +163,6 @@ Example:
         </div>
       </r-card>
 
-      <template id="filterDropdownTemplate">
-        <paper-dropdown-menu no-label-float placeholder="Filter">
-          <paper-listbox class="dropdown-content" attr-for-selected="value">
-            <template is="dom-repeat" items="[[items]]">
-              <paper-item value="[[item.ID]]">[[item.Title]]</paper-item>
-            </template>
-          </paper-listbox>
-        </paper-dropdown-menu>
-      </template>
 
     </template>
   </dom-module>
@@ -320,25 +322,6 @@ Example:
           /* setup actions on paging Buttons*/
           this.$.pagingForward.addEventListener('tap',function(){this._skipPage(true)}.bind(this));
           this.$.pagingBackward.addEventListener('tap',function(){this._skipPage(false)}.bind(this));
-
-          /*grid.items = function(params,callback){
-           console.log(params);
-           if(!this.$.ajax.loading){
-           if(!this.lastResponse){this.requestResponse({initialLoad:1})} else if(!this.lastResponse.sortingPagingValues.disableNextButton){
-           this._skipPage(true);
-           }
-           }
-           this.$.ajax.removeEventListener('last-response-changed');
-           this.$.ajax.addEventListener('last-response-changed',function() {
-           console.log('response received');
-           console.log(this.lastResponse);
-           callback(this.lastResponse.data);
-           }.bind(this))
-           //console.log(params);
-           }.bind(this);*/
-          //this.requestResponse();
-
-
         },
         /* If response is Array, it was requested by Autocomplete for column filters, else it's HitList data*/
         _routeResponse:function(response){
@@ -350,32 +333,101 @@ Example:
             }
           }
         },
+         _findSearchValue:function(id){
+           return this._searchValues.filter(function(item){return item.id===id});
+         },
         _generateDropdownFilter:function(column){
           var dd = document.createElement('r-dropdown');
-          dd.noLabelFloat=true; dd.placeholder='Filter';
+          dd.noLabelFloat=true; dd.placeholder='Filter'; dd.style="width:30px;";
           dd.addEventListener('tap',function(e){this._populateDropdownFilter(e,column);}.bind(this));
+          dd.addEventListener('iron-select',function(e){this.filterData(e)});
           return dd;
         },
         _populateDropdownFilter:function(event,column){
-          console.log(column); console.log(event);
-          if(Polymer.dom(Polymer.dom(event).rootTarget).children.length===0){
+          console.log(Polymer.dom(event).path);
+          var dd = Polymer.dom(event).path.filter(function(dr){return dr.localName ==='r-dropdown'})[0];
+          console.log(Polymer.dom(dd).children.length);
+          if(Polymer.dom(dd).children.length===0){
             this._fetchItems(column.name)
                     .then(function(response){
                       var listbox = document.createElement('paper-listbox');
                       listbox.classList.add('dropdown-content');
+                      listbox.style='max-height:350px;overflow-x:hidden;';
                       listbox.attrForSelected='value';
                       response.ResultSet.Result.forEach(function(item){
                         var li=document.createElement('paper-item');
-                        Polymer.dom(li).setAttribute('value',item.Value);
-                        li.textContent = item.Text;
+                        //Polymer.dom(li).setAttribute('value',item.ID);
+                        li.value=item.ID;
+                        li.textContent = item.Title;
+                        li.style='min-height:32px;font-size:13px;padding-right:24px';
                         Polymer.dom(listbox).appendChild(li);
                       });
-                      Polymer.dom(event).rootTarget.appendChild(listbox);
-                      Polymer.dom(event).rootTarget.open();
+                      Polymer.dom(dd).appendChild(listbox);
+                      dd.open();
                     }.bind(this));
-            //dropdown.root.querySelector('paper-dropdown-menu').addEventListener('paper-dropdown-open', function(e){this._fetchItems(e,column.name)}.bind(this));
-            //dropdown.root.querySelector('paper-listbox').addEventListener('iron-select', function(e){this.filterData(e)}.bind(this));
           }
+        },
+        filterData:function(e){
+          console.log(Polymer.dom(e).rootTarget);
+          var trigger = Polymer.dom(e).rootTarget;
+          var filterable = this.grid.columns.filter(function(column){return column.filterable});
+          filterable.forEach(function(col){
+            var cell=this.grid.header.getCell(this.grid.header.rowCount-1, col.colIndex);
+            var value = '';
+            switch (parseInt(col.type)) {
+              case this._elementType.Single:
+              case this._elementType.Multi:
+              case this._elementType.GridElement:
+              case this._elementType.AdditionalColumn:
+                    value = cell.content.selectedItem.value; break;
+              //TODO: rethink the folowing
+              case this._elementType.Date:
+                value = '';
+                break;
+              case this._elementType.OpenNumeric:
+                value = '';
+                break;
+              case this._elementType.MultiElement:
+                value = '';
+                break;
+              default:
+                value = cell.content.value;
+                break;
+            }
+            var searchValue = this._findSearchValue(col.name)[0];
+
+            if(value){
+              if(!searchValue){
+                searchValue = {
+                  type: col.type,
+                  label: col.hidingToggleText,
+                  id: col.name
+                }
+              }
+              //TODO:process the following
+              switch (col.type) {
+                case HitListElementType.Date:
+                case HitListElementType.OpenNumeric:
+                  searchValue.op = parseInt(row.one("select").get("value"), 10);
+                  searchValue.val1 = [row.one(".val1 input").get("value")];
+                  searchValue.val2 = (searchValue.op === SearchableListOperator.Between) ? [row.one(".val2 input").get("value")] : [];
+                  if (searchValue.op === SearchableListOperator.Between && (searchValue.val1[0] === "" || searchValue.val2[0] === "")) {
+                    return false;
+                  }
+                  break;
+                default:
+                  searchValue.op = (searchItem.type === HitListElementType.OpenText) ? SearchableListOperator.LIKE : SearchableListOperator.Equal;
+                  searchValue.val1 = [value];
+                  searchValue.val2 = null ;
+                  if (hiddenValue) {
+                    searchValue.precode = hiddenValue;
+                  }
+                  break;
+              }
+
+            }
+
+          }.bind(this));
         },
         _generateDateFilter:function(){},
         _generateOpenNumericFilter:function(){},
@@ -594,8 +646,7 @@ Example:
           var constructor = jsonDate.replace(new RegExp("^/Date\\(([-+]?\\d+)\\)/$"), "new Date($1)");
           if (constructor == jsonDate) {return jsonDate;}
           return eval(constructor);
-        },
-        filterData:function(){}
+        }
 
 
       });

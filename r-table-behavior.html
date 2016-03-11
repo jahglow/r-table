@@ -212,46 +212,46 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
      * toggles visibility of a search row (under column headings) that contains inputs to filter data.
      * */
     toggleSearchRow:function(event){
-        if(!this._filterRowVisible){
-          this.grid.header.addRow();
-          var filterRow = this.grid.header.rowCount -1;
-          this.grid.header.setRowClassName(filterRow, 'filterRow');
-          this.columns.forEach(function(column,index){
-            if(column.filterable){
-              var cell = this.grid.header.getCell(filterRow, this.indexed?index +1:index);
-              if(this._elementType && column.type){ //this is a hitlist
-                switch(parseInt(column.type)){
-                  case this._elementType.Single:
-                  case this._elementType.Multi:
-                  case this._elementType.GridElement:
-                  case this._elementType.AdditionalColumn:
-                    cell.content = this._generateDropdownFilter(column);
-                    break;
-                  case this._elementType.Date:
-                    cell.content = this._generateDateFilter(column);
-                    break;
-                  case this._elementType.OpenNumeric:
-                    cell.content = this._generateOpenNumericFilter(column);
-                    break;
-                  case this._elementType.MultiElement:
-                    cell.content = this._generateMultiElementFilter(column);
-                    break;
-                  default:
-                    cell.content = this._generateOpenTextFilter(column);
-                    break;
-                }
-              } else { // this is an aggregated table
-                cell.content = this._generateOpenTextFilter();
+      if(!this._filterRowVisible){
+        this.grid.header.addRow();
+        var filterRow = this.grid.header.rowCount -1;
+        this.grid.header.setRowClassName(filterRow, 'filterRow');
+        this.columns.forEach(function(column,index){
+          if(column.filterable){
+            var cell = this.grid.header.getCell(filterRow, this.indexed?index +1:index);
+            if(this._elementType && column.type){ //this is a hitlist
+              switch(parseInt(column.type)){
+                case this._elementType.Single:
+                case this._elementType.Multi:
+                case this._elementType.GridElement:
+                case this._elementType.AdditionalColumn:
+                  cell.content = this._generateDropdownFilter(column);
+                  break;
+                case this._elementType.Date:
+                  cell.content = this._generateDateFilter(column);
+                  break;
+                case this._elementType.OpenNumeric:
+                  cell.content = this._generateOpenNumericFilter(column);
+                  break;
+                case this._elementType.MultiElement:
+                  cell.content = this._generateMultiElementFilter(column);
+                  break;
+                default:
+                  cell.content = this._generateOpenTextFilter(column);
+                  break;
               }
+            } else { // this is an aggregated table
+              cell.content = this._generateOpenTextFilter();
             }
-          }.bind(this));
-          this._filterRowVisible=true;
+          }
+        }.bind(this));
+        this._filterRowVisible=true;
 
-        } else {
-          this.grid.header.removeRow(this.grid.header.rowCount - 1);
-          this.grid.items = this.data;
-          this._filterRowVisible=false;
-        }
+      } else {
+        this.grid.header.removeRow(this.grid.header.rowCount - 1);
+        this.grid.items = Array.isArray(this.data)?this.data:this.data.data;
+        this._filterRowVisible=false;
+      }
     },
 
     _generateOpenTextFilter:function(){
@@ -338,7 +338,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
      * @default null
      * */
     unfreezeColumns:function(params){
-        this.grid.frozenColumns = 0;
+      this.grid.frozenColumns = 0;
     },
     /**
      * ### VoiceControl
@@ -395,7 +395,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
      * */
     showAllColumns:function(params){
       console.log(params);
-        this.grid.columns.forEach(function(column){column.hidden = false});
+      this.grid.columns.forEach(function(column){column.hidden = false});
     },
     /**
      * ### VoiceControl

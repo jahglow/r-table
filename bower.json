@@ -1,6 +1,6 @@
 {
   "name": "r-table",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "authors": [
     "John Archer <jahglow@gmail.com>"
   ],
@@ -33,8 +33,6 @@
     "iron-page-url": "PolymerElements/iron-page-url#~0.7.0",
     "iron-pages": "PolymerElements/iron-pages#^1.0.0",
     "paper-progress": "PolymerElements/paper-progress#^1.0.0",
-    "paper-dropdown-menu": "PolymerElements/paper-dropdown-menu#^1.0.0",
-    "paper-autocomplete": "ellipticaljs/paper-autocomplete#^1.0.5",
     "r-dropdown": "jahglow/r-dropdown#^1.0.0"
   },
   "devDependencies": {
