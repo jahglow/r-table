@@ -305,6 +305,33 @@ Example:
               }
             }
           },
+          /**
+           * Searchable List Operators
+           * */
+          _op:{
+            type:Object,
+            value:function(){
+              return {
+                "Equal":0,
+                "LessThan":1,
+                "GreaterThan":2,
+                "LessThanOrEqual":3,
+                "GreaterThanOrEqual":4,
+                "LIKE":5,
+                "IS":6,
+                "ISNOT":7,
+                "IsNull":8,
+                "NotEqual":9,
+                "IN":10,
+                "Between":11,
+                "NotIn":12,
+                "SubCriteria":13,
+                "LessThanOrExactEqual":14,
+                "GreaterThanOrExactEqual":15,
+                "IsNotNull":16
+              }
+            }
+          },
           _searchValues:{
             type:Array,
             value: []
@@ -333,9 +360,18 @@ Example:
             }
           }
         },
-         _findSearchValue:function(id){
-           return this._searchValues.filter(function(item){return item.id===id});
-         },
+        _findSearchValue:function(id){
+          return this._searchValues.filter(function(item){return item.id===id});
+        },
+        _generateOpenTextFilter:function(){
+          var input = document.createElement('paper-input');
+          input.noLabelFloat = true; input.type='search'; input.style.width='30px'; input.placeholder = 'Filter';
+          input.addEventListener('blur', function(e){this.filterData(e)}.bind(this));
+          input.addOwnKeyBinding('enter', function(e){this.filterData(e)}.bind(this));
+
+          return input
+        },
+
         _generateDropdownFilter:function(column){
           var dd = document.createElement('r-dropdown');
           dd.noLabelFloat=true; dd.placeholder='Filter'; dd.style="width:30px;";
@@ -373,13 +409,13 @@ Example:
           var filterable = this.grid.columns.filter(function(column){return column.filterable});
           filterable.forEach(function(col){
             var cell=this.grid.header.getCell(this.grid.header.rowCount-1, col.colIndex);
-            var value = '';
+            var value = '', itemsToRemove=[];
             switch (parseInt(col.type)) {
               case this._elementType.Single:
               case this._elementType.Multi:
               case this._elementType.GridElement:
               case this._elementType.AdditionalColumn:
-                    value = cell.content.selectedItem.value; break;
+                value = cell.content.selectedItem?cell.content.selectedItem.value:null; break;
               //TODO: rethink the folowing
               case this._elementType.Date:
                 value = '';
@@ -394,40 +430,58 @@ Example:
                 value = cell.content.value;
                 break;
             }
+            console.log('value='+value);
             var searchValue = this._findSearchValue(col.name)[0];
 
             if(value){
               if(!searchValue){
                 searchValue = {
-                  type: col.type,
+                  type: parseInt(col.type),
                   label: col.hidingToggleText,
                   id: col.name
                 }
               }
-              //TODO:process the following
+              //TODO:process the following hl.js line 520
               switch (col.type) {
-                case HitListElementType.Date:
-                case HitListElementType.OpenNumeric:
-                  searchValue.op = parseInt(row.one("select").get("value"), 10);
-                  searchValue.val1 = [row.one(".val1 input").get("value")];
-                  searchValue.val2 = (searchValue.op === SearchableListOperator.Between) ? [row.one(".val2 input").get("value")] : [];
-                  if (searchValue.op === SearchableListOperator.Between && (searchValue.val1[0] === "" || searchValue.val2[0] === "")) {
+                case this._elementType.Date:
+                case this._elementType.OpenNumeric:
+                  //basic idea is to provide tow inputs: From and To.
+                  // If `from` is empty and `to` is  filled: op=this._op.Before;
+                  // If `from` is filled and `to` is  empty: op=this._op.After;
+                  // If both `from`  and `to` are filled: op=this._op.Between;
+                  /*searchValue.op = parseInt(row.one("select").get("value"), 10);
+                   searchValue.val1 = [row.one(".val1 input").get("value")];
+                   searchValue.val2 = (searchValue.op === this._op.Between) ? [row.one(".val2 input").get("value")] : [];*/
+                  if (searchValue.op === this._op.Between && (searchValue.val1[0] === "" || searchValue.val2[0] === "")) {
                     return false;
                   }
                   break;
                 default:
-                  searchValue.op = (searchItem.type === HitListElementType.OpenText) ? SearchableListOperator.LIKE : SearchableListOperator.Equal;
+                  searchValue.op = (parseInt(col.type) === this._elementType.OpenText) ? this._op.LIKE : this._op.Equal;
                   searchValue.val1 = [value];
-                  searchValue.val2 = null ;
-                  if (hiddenValue) {
-                    searchValue.precode = hiddenValue;
-                  }
+                  searchValue.val2 = null;
+                  /*if (hiddenValue) {
+                   searchValue.precode = hiddenValue;
+                   }*/
                   break;
               }
+              var val2update = this._findSearchValue(col.name)[0];
+              if(val2update){val2update=searchValue} else {this._searchValues.push(searchValue)}
 
+            } else {
+              if (searchValue) {
+                this.splice('_searchValues', searchValue);
+              }
             }
-
           }.bind(this));
+          console.log(this._searchValues);
+          this._clearPaging();
+          this.requestResponse({
+            isSorting: true,
+            search: this._searchValues,
+            initialLoad: true
+          });
+
         },
         _generateDateFilter:function(){},
         _generateOpenNumericFilter:function(){},
