@@ -231,7 +231,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                   cell.content = this._generateDateFilter(column);
                   break;
                 case this._elementType.OpenNumeric:
-                  cell.content = this._generateOpenNumericFilter(column);
+                  cell.content = this._generateDateFilter(column,true);
                   break;
                 case this._elementType.MultiElement:
                   cell.content = this._generateMultiElementFilter(column);

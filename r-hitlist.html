@@ -21,6 +21,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../iron-page-url/iron-page-url.html">
 <link rel="import" href="../iron-pages/iron-pages.html">
 <link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="../paper-date-picker/paper-date-picker.html">
+<link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../r-dropdown/r-dropdown.html">
 
 
@@ -43,9 +46,9 @@ Example:
 @element r-hitlist
 @demo demo/r-hitlist.html
 -->
-<dom-module id="r-hitlist">
   <dom-module id="r-hitlist">
     <template strip-whitespace>
+      <style include="paper-date-picker-dialog-style"></style>
       <style include="vaadin-grid-icons-fix">
         :host{
           display:block;
@@ -74,12 +77,12 @@ Example:
         #columnToggle .dropdown-content paper-icon-item[selected] ::content iron-icon{opacity: 1}
         :host vaadin-grid ::content thead>tr.vaadin-grid-row {height:40px !important}
         :host vaadin-grid ::content thead>tr.vaadin-grid-row>th {height:40px !important}
-        :host vaadin-grid ::content .filterRow>th> paper-input {
+        :host vaadin-grid ::content .filterRow>th paper-input {
           --paper-input-container:{padding:0 !important};
           --paper-input-container-input:{font-size:13px !important};
           @apply(--layout-flex);
         }
-        :host vaadin-grid ::content .filterRow>th> paper-input paper-input-container input {
+        :host vaadin-grid ::content .filterRow>th paper-input paper-input-container input {
           font-size:13px !important;
         }
         :host vaadin-grid ::content .filterRow>th> r-dropdown {
@@ -88,6 +91,9 @@ Example:
         }
         :host vaadin-grid ::content .filterRow>th> r-dropdown paper-input paper-input-container input {
           font-size:13px !important;
+        }
+        :host vaadin-grid ::content .filterRow>th> .dateOrNumeric {
+          @apply(--layout-horizontal);
         }
 
         :host vaadin-grid ::content .vaadin-grid-sidebar {display:none}
@@ -136,6 +142,15 @@ Example:
             <paper-icon-button icon="chevron-right" disabled$="[[data.disableNextButton]]" id="pagingForward"></paper-icon-button>
           </div>
           <paper-progress hidden$="[[!loading]]" indeterminate></paper-progress>
+
+          <paper-dialog id="dialog" class="paper-date-picker-dialog" modal on-iron-overlay-closed="dismissDialog">
+            <paper-date-picker id="picker"></paper-date-picker>
+            <div class="buttons">
+              <paper-button dialog-dismiss on-tap="clearDialog">Clear</paper-button>
+              <paper-button dialog-dismiss>Cancel</paper-button>
+              <paper-button dialog-confirm>OK</paper-button>
+            </div>
+          </paper-dialog>
         </div>
         <div id="toolbox">
           <paper-tooltip for="searchButton">Toggle filter controls</paper-tooltip>
@@ -175,7 +190,7 @@ Example:
         listeners:{
           'viewList.iron-select':'switchViews',
           'hitlistTemplate.dom-change':'_renderHitlist',
-          'cards-view-changed':'renderCards'
+          'cardsView-changed':'renderCards'
         },
 
         behaviors: [
@@ -334,7 +349,9 @@ Example:
           },
           _searchValues:{
             type:Array,
-            value: []
+            value: function(){
+              return [];
+            }
           },
           _resolveAutocomplete:{
             type:Function,
@@ -343,12 +360,12 @@ Example:
 
         },
         ready:function(){
-          console.log('ready');
+          console.log(this.$.dialog);
           /*get first data*/
           this.requestResponse({initialLoad:true});
           /* setup actions on paging Buttons*/
-          this.$.pagingForward.addEventListener('tap',function(){this._skipPage(true)}.bind(this));
-          this.$.pagingBackward.addEventListener('tap',function(){this._skipPage(false)}.bind(this));
+          this.$.pagingForward.addEventListener('tap',()=>{this._skipPage(true)});
+          this.$.pagingBackward.addEventListener('tap',()=>{this._skipPage(false)});
         },
         /* If response is Array, it was requested by Autocomplete for column filters, else it's HitList data*/
         _routeResponse:function(response){
@@ -366,8 +383,8 @@ Example:
         _generateOpenTextFilter:function(){
           var input = document.createElement('paper-input');
           input.noLabelFloat = true; input.type='search'; input.style.width='30px'; input.placeholder = 'Filter';
-          input.addEventListener('blur', function(e){this.filterData(e)}.bind(this));
-          input.addOwnKeyBinding('enter', function(e){this.filterData(e)}.bind(this));
+          input.addEventListener('blur', (e)=>{this.filterData(e)});
+          //input.addOwnKeyBinding('enter', this.filterData);
 
           return input
         },
@@ -375,8 +392,8 @@ Example:
         _generateDropdownFilter:function(column){
           var dd = document.createElement('r-dropdown');
           dd.noLabelFloat=true; dd.placeholder='Filter'; dd.style="width:30px;";
-          dd.addEventListener('tap',function(e){this._populateDropdownFilter(e,column);}.bind(this));
-          dd.addEventListener('iron-select',function(e){this.filterData(e)});
+          dd.addEventListener('tap',(e)=>{this._populateDropdownFilter(e,column);});
+          dd.addEventListener('iron-select',(e)=>{this.filterData(e)});
           return dd;
         },
         _populateDropdownFilter:function(event,column){
@@ -403,13 +420,27 @@ Example:
                     }.bind(this));
           }
         },
+        /**
+         * Is triggered every time when `_searchValues` array change
+         * */
+        _filterTrigger:function(){
+          console.log(this._searchValues.slice());
+          this._clearPaging();
+          this.requestResponse({
+            isSorting: true,
+            search: JSON.stringify(this._searchValues.slice()),
+            initialLoad: true
+          });
+
+        },
         filterData:function(e){
           console.log(Polymer.dom(e).rootTarget);
           var trigger = Polymer.dom(e).rootTarget;
+          console.log(this);
           var filterable = this.grid.columns.filter(function(column){return column.filterable});
           filterable.forEach(function(col){
             var cell=this.grid.header.getCell(this.grid.header.rowCount-1, col.colIndex);
-            var value = '', itemsToRemove=[];
+            var value = '';
             switch (parseInt(col.type)) {
               case this._elementType.Single:
               case this._elementType.Multi:
@@ -418,10 +449,11 @@ Example:
                 value = cell.content.selectedItem?cell.content.selectedItem.value:null; break;
               //TODO: rethink the folowing
               case this._elementType.Date:
-                value = '';
+                value = Polymer.dom(cell.content).querySelectorAll('paper-input');
                 break;
               case this._elementType.OpenNumeric:
-                value = '';
+                value = Polymer.dom(cell.content).querySelectorAll('paper-input');
+                      [].slice.call(value).forEach((input)=>{input.output=input.value});
                 break;
               case this._elementType.MultiElement:
                 value = '';
@@ -434,6 +466,7 @@ Example:
             var searchValue = this._findSearchValue(col.name)[0];
 
             if(value){
+
               if(!searchValue){
                 searchValue = {
                   type: parseInt(col.type),
@@ -441,19 +474,24 @@ Example:
                   id: col.name
                 }
               }
+              console.log(col.type);
               //TODO:process the following hl.js line 520
-              switch (col.type) {
+              switch (parseInt(col.type)) {
                 case this._elementType.Date:
                 case this._elementType.OpenNumeric:
-                  //basic idea is to provide tow inputs: From and To.
-                  // If `from` is empty and `to` is  filled: op=this._op.Before;
-                  // If `from` is filled and `to` is  empty: op=this._op.After;
-                  // If both `from`  and `to` are filled: op=this._op.Between;
-                  /*searchValue.op = parseInt(row.one("select").get("value"), 10);
-                   searchValue.val1 = [row.one(".val1 input").get("value")];
-                   searchValue.val2 = (searchValue.op === this._op.Between) ? [row.one(".val2 input").get("value")] : [];*/
-                  if (searchValue.op === this._op.Between && (searchValue.val1[0] === "" || searchValue.val2[0] === "")) {
-                    return false;
+                  console.log('here');
+                  /**
+                   * basic idea is to provide tow inputs: From and To.
+                   * If `from` is empty and `to` is  filled: op=this._op.Before;
+                   * If `from` is filled and `to` is  empty: op=this._op.After;
+                   * If both `from`  and `to` are filled: op=this._op.Between;
+                   * */
+
+                   searchValue.op = (value[0].output.length>0 ? (value[1].output.length>0?this._op.Between : this._op.GreaterThanOrEqual ):this._op.LessThanOrEqual);
+                   searchValue.val1 = [value[0].output];
+                   searchValue.val2 = (searchValue.op === this._op.Between) ? [value[1].output] : [];
+                  if (searchValue.val1[0] === "" && searchValue.val2[0] === "" && this._findSearchValue(col.name)[0]) {
+                    this.splice('_searchValues', this._searchValues.indexOf(this._findSearchValue(col.name)[0]),1);
                   }
                   break;
                 default:
@@ -466,24 +504,73 @@ Example:
                   break;
               }
               var val2update = this._findSearchValue(col.name)[0];
-              if(val2update){val2update=searchValue} else {this._searchValues.push(searchValue)}
+              if(val2update){val2update=searchValue} else {this.push('_searchValues',searchValue)}
 
             } else {
               if (searchValue) {
-                this.splice('_searchValues', searchValue);
+                this.splice('_searchValues', this._searchValues.indexOf(searchValue),1);
               }
             }
           }.bind(this));
-          console.log(this._searchValues);
-          this._clearPaging();
-          this.requestResponse({
-            isSorting: true,
-            search: this._searchValues,
-            initialLoad: true
-          });
+          this._filterTrigger();
+        },
+        _generateDateFilter:function(column,isNumeric){
+          var span = document.createElement('span');
+          span.classList.add('dateOrNumeric');
+          var from = document.createElement('paper-input');
+          from.noLabelFloat = true; from.type='number';  from.style.width='60px'; from.style.paddingRight='5px'; from.placeholder = 'From';
+          from.output='';
+          var to = document.createElement('paper-input');
+          to.noLabelFloat = true; to.type='number';  to.style.width='60px'; to.placeholder = 'To';
+          to.output='';
+          if(!isNumeric){
+            from.addEventListener('focus',this.showDialog);
+            from.readonly=true;
+            from.type='text';
+            to.addEventListener('focus',this.showDialog);
+            to.readonly=true;
+            to.type='text';
+            from.addEventListener('value-changed',(e)=>{this.filterData(e)});
+            to.addEventListener('value-changed',(e)=>{this.filterData(e)});
+          } else {
+            from.addEventListener('blur',(e)=>{this.filterData(e)});
+            to.addEventListener('blur',(e)=>{this.filterData(e)});
+          }
+          span.appendChild(from);
+          span.appendChild(to);
+          return span
 
         },
-        _generateDateFilter:function(){},
+        showDialog:function(e){
+          var input = Polymer.dom(e).rootTarget;
+          var host=Polymer.dom(e).path.filter((item)=>{return item.localName==='r-hitlist';})[0];
+          if(input.date){host.$.picker.date = input.date}
+          console.log(host.$.picker);
+          host.$.dialog.refInput = input;
+          host.$.dialog.toggle();
+        },
+        dismissDialog: function(e) {
+          console.log(e)
+          if (e.detail.confirmed) {
+            //TODO: add clear date functionality
+            var target = Polymer.dom(e).rootTarget.refInput;
+            target.date = this.$.picker.date;
+            target.output = this.$.picker.dateFormat(this.$.picker.date,'l');
+            target.value = this.$.picker.dateFormat(this.$.picker.date,'MMM D, YY');
+          }
+        },
+        clearDialog:function(e){
+          console.log(Polymer.dom(e));
+          var host=Polymer.dom(e).path.filter((item)=>{return item.localName==='r-hitlist';})[0];
+          console.log(host)
+          var target = Polymer.dom(e).path.filter((item)=>{return item.id==='dialog'})[0].refInput;
+          console.log(target)
+          host.$.dialog.toggle();
+          target.date = new Date();
+          target.output = '';
+          target.value = '';
+        },
+
         _generateOpenNumericFilter:function(){},
         _generateMultiElementFilter:function(){},
         /**
@@ -576,7 +663,7 @@ Example:
             /*set common params*/
             var params = {PageId: o.pageid, Preview: o.preview, Language:this.language, DbType:this.dbType};
             /*if options are passed, add options*/
-            if(options && typeof options === Object){ console.log(options);
+            if(options && typeof options === 'object'){ console.log(options);
               for (var attrname in options) {
                 params[attrname] = typeof options[attrname]==='boolean'?(options[attrname]?'1':'0'):options[attrname];
               }
@@ -584,6 +671,7 @@ Example:
             if (document.querySelector('#PageStateId')) {
               params.pageStateId=document.querySelector('#PageStateId').value;
             }
+            if(!params.search && this._searchValues.length>0){params.search = JSON.stringify(this._searchValues);}
             var sortingPagingValues = this.sortingPagingValues || {};
 
             if (options && options.initialLoad === true && this.$$('#cardsPlaceholder')) {
@@ -682,7 +770,7 @@ Example:
         },
         _sortChange:function(event){
           if(!this.previousSort || (this.previousSort && (this.previousSort.column !== Polymer.dom(event).event.detail.value[0].column || this.previousSort.direction !== Polymer.dom(event).event.detail.value[0].direction))){
-            if (this.loading){return;}
+            //if (this.loading){return;}
             this.sortingPagingValues.sortingValues.sortBy={};
             this.sortingPagingValues.sortingValues.sortBy[this.columns[Polymer.dom(event).event.detail.value[0].column].name]=Polymer.dom(event).event.detail.value[0].direction==='asc'?1:-1;
             this._clearPaging();
