@@ -700,9 +700,8 @@ Example:
           for(var s in sortBy){
             var column = this.columns.map(function(col){return col.name}).indexOf(s);
             var direction = sortBy[s]===-1?'desc':'asc';
-            if(column>=0){this._sortOrder.push({column:column,direction:direction})};
+            if(column>=0){this._sortOrder=this.previousSort=[{column:column,direction:direction}]};//store for comparing sorting in _sortChange
           }
-          this.previousSort=this._sortOrder[0]; //store for comparing sorting in _sortChange
           this.set('data.data', r.data);
           this.set('data.sorting', this._sortOrder);
           this.set('data.paging', r.sortingPagingValues.pagingValues);
