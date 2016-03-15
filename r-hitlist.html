@@ -449,7 +449,7 @@ Example:
                 value = cell.content.selectedItem?cell.content.selectedItem.value:null; break;
               //TODO: rethink the folowing
               case this._elementType.Date:
-                value = Polymer.dom(cell.content).querySelectorAll('paper-input');
+                value = [].slice.call(Polymer.dom(cell.content).querySelectorAll('paper-input')).filter((element)=>{element.value.length>0});
                 break;
               case this._elementType.OpenNumeric:
                 value = Polymer.dom(cell.content).querySelectorAll('paper-input');
@@ -465,7 +465,7 @@ Example:
             console.log('value='+value);
             var searchValue = this._findSearchValue(col.name)[0];
 
-            if(value){
+            if(value && value.length>0){
 
               if(!searchValue){
                 searchValue = {
@@ -486,10 +486,10 @@ Example:
                    * If `from` is filled and `to` is  empty: op=this._op.After;
                    * If both `from`  and `to` are filled: op=this._op.Between;
                    * */
-
-                   searchValue.op = (value[0].output.length>0 ? (value[1].output.length>0?this._op.Between : this._op.GreaterThanOrEqual ):this._op.LessThanOrEqual);
-                   searchValue.val1 = [value[0].output];
-                   searchValue.val2 = (searchValue.op === this._op.Between) ? [value[1].output] : [];
+                  var inputs=Polymer.dom(cell.content).querySelectorAll('paper-input');
+                   searchValue.op = (inputs[0].output.length>0 ? (inputs[1].output.length>0?this._op.Between : this._op.GreaterThanOrEqual ):this._op.LessThanOrEqual);
+                   searchValue.val1 = [inputs[0].output.length>0?[inputs[0].output] : []];
+                   searchValue.val2 = (searchValue.op === this._op.Between) ? [inputs[1].output] : [];
                   if (searchValue.val1[0] === "" && searchValue.val2[0] === "" && this._findSearchValue(col.name)[0]) {
                     this.splice('_searchValues', this._searchValues.indexOf(this._findSearchValue(col.name)[0]),1);
                   }
