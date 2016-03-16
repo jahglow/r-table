@@ -375,7 +375,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         var item=Polymer.dom(event).event.detail.item;
         var col=parseInt(item.attributes.getNamedItem('value').value);
         this.grid.columns[this.indexed? col +1:col].hidden=item.attributes.getNamedItem('selected')?false:true;
-        this._updateFilteredData(col);
+        if(!this.hitlist){this._updateFilteredData(col);}
       }
     },
     /**
