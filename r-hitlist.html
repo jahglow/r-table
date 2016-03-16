@@ -190,12 +190,13 @@ Example:
       listeners:{
         'viewList.iron-select':'switchViews',
         'hitlistTemplate.dom-change':'_renderHitlist',
-        'cardsView-changed':'renderCards'
+        'cardsView-enable':'renderCards'
       },
 
       behaviors: [
         Polymer.IronResizableBehavior,
-        Polymer.RTableBehavior,
+        Confirmit.RTableBehavior,
+        Confirmit.RCardBehavior,
         Polymer.Templatizer
       ],
 
@@ -628,7 +629,7 @@ Example:
               if(!this.visibleRows || (this.visibleRows && this.visibleRows>this.data.data.length)){this.grid.visibleRows=this.data.data.length} else if(this.visibleRows){this.grid.visibleRows=this.visibleRows;}
             }
             /*sorting applied*/
-            if(this.data.sorting.length>0){this.grid.sortOrder = this._sortOrder};
+            if(this._sortOrder.length>0){this.grid.sortOrder = this._sortOrder};
           }
           //})
 
@@ -638,6 +639,7 @@ Example:
       switchViews:function(e){
         this.views.forEach(function(item){
           this[item.view+'View'] = item.view===Polymer.dom(e).event.detail.item.view;
+          this.fire(item.view+'View-enable');
         }.bind(this));
       },
       /**
@@ -718,7 +720,7 @@ Example:
             if(!this.visibleRows || (this.visibleRows && this.visibleRows>r.data.length)){grid.visibleRows=r.data.length} else if(this.visibleRows){grid.visibleRows=this.visibleRows;}
             grid.then(function(){this.notifyResize()}.bind(this));
           }
-          if(this.cardsView && this.$$('#cardsPlaceholder')){
+          if(this.cardsView && this.$.cardsPlaceholder){
             this.renderCards();
           }
 
