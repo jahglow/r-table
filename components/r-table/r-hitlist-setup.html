@@ -1,0 +1,593 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../r-card/r-card-behavior.html">
+<link rel="import" href="../r-card/r-card.html">
+<link rel="import" href="../vaadin-grid/vaadin-grid.html">
+<link rel="import" href="./r-table-behavior.html">
+<link rel="import" href="./vaadin-grid-icons-fix.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../paper-tooltip/paper-tooltip.html">
+<link rel="import" href="../paper-input/paper-input.html">
+
+<link rel="import" href="../iron-pages/iron-pages.html">
+<link rel="import" href="../paper-tabs/paper-tabs.html">
+<link rel="import" href="../paper-tabs/paper-tab.html">
+<link rel="import" href="../paper-input/paper-textarea.html">
+<link rel="import" href="../paper-toggle-button/paper-toggle-button.html">
+
+
+
+<!--
+A helper element to provide a WYSIWYG setup for Reportal HitLits using HitList v2 API.
+It can:
+** accept unlimited levels of nested headers,
+** make columns: sortable, hidable/hidden, filterable;
+** limit the amount of records to be displayed;
+** allow row(s) selection;
+** autocreate row index column;
+** override column headers.
+
+It's based off [`vaadin-grid`](https://github.com/vaadin/vaadin-grid) element by Vaadin team ([Apache 2.0 license](https://github.com/vaadin/vaadin-grid/blob/master/LICENSE)).
+See `vaadin-grid` [API docs](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html) and [Code Examples](https://cdn.vaadin.com/vaadin-elements/latest/vaadin-grid/demo/) to get a deeper insight into its functionality, if you want to modify or extend it.
+
+Example:
+
+    <r-hitlist-setup></r-hitlist-setup>
+
+@group Reportal Elements
+@element r-hitlist-setup
+@demo demo/r-hitlist-setup.html
+-->
+<dom-module id="r-hitlist-setup">
+  <template strip-whitespace>
+    <style>
+      :host{
+        display:block;
+        position:relative;
+      }
+      :host >paper-card {
+        display:block;
+      }
+      :host paper-card#setup{
+        --paper-card-background-color: var(--default-primary-color);
+        --paper-card-header-color: var(--text-primary-color);
+        width: calc(100% - 16px);
+        margin: 0 auto;
+        margin-bottom:16px;
+      }
+      :host #settings>paper-card{
+        --paper-card-header-color: var(--primary-text-color) !important;
+        padding-bottom: 24px;
+      }
+      :host #setup>paper-tabs paper-tab{
+        --paper-tab-content: {
+          color:var(--text-primary-color);
+        }
+      }
+      :host #settings paper-card div.layout.vertical>*{margin-bottom:16px; min-width:200px;}
+      :host #settings paper-card div.layout.vertical{padding: 0 16px 16px 16px}
+      :host #setup iron-pages >*{background-color:white; padding:16px;}
+
+      :host div#pagingInfo{padding:0 24px}
+      :host #pagingRow{height:56px; color:rgba(0,0,0,0.54); font-size:12px; font-weight:500; }
+      :host #pagingRow>*{@apply(--layout-self-center);}
+      :host #pagingRow #pagingForward{margin-right:6px; margin-left:4px}
+      :host #pagingRow #pagingBackward{margin-right:8px;}
+
+      :host paper-progress{
+        --paper-progress-active-color: var(--accent-color,#e91e63);
+        position:absolute;
+        top:0px;
+        width:100%;
+      }
+      :host #columnApply{
+        background: var(--default-primary-color, #03A9F4);
+        color: var(--text-primary-color, #FFFFFF);
+      }
+      :host #hWrapper{display:none}
+      :host #gridControls{position:absolute; top: -56px;right: 0;}
+      :host #gridControls paper-icon-item{cursor: pointer;}
+
+    </style>
+    <iron-ajax id="ajax" url="" handle-as="json" last-response="{{lastResponse}}"
+               debounce-duration="300"
+               verbose loading="{{loading}}"></iron-ajax>
+    <iron-page-url query="{{query}}">
+    </iron-page-url>
+
+    <template is="dom-if" if="[[setup]]" id="setupTemplate">
+      <iron-localstorage name="_genericHLconfig" value="{{LS}}" on-iron-localstorage-load-empty="initializeDefaultSetup"></iron-localstorage>
+      <paper-card heading="Configure your hitlist" class="flex" id="setup">
+        <div hidden="[[!errorNoConfig]]" style="padding:0 16px 16px 16px; color: #ffffff ">
+          My minions couldn't detect a HitList on the page. They suppose it doesn't exist or it's hidden.
+          In the latter case, please, go to its properties and uncheck the "Hidden" checkbox and save. Then come back and we'll configure it together!
+        </div>
+        <paper-tabs selected="{{LS.topTab}}" hidden="[[errorNoConfig]]">
+          <paper-tab>Your config</paper-tab>
+          <paper-tab>Advanced setup</paper-tab>
+        </paper-tabs>
+        <iron-pages hidden="[[errorNoConfig]]" selected="{{LS.topTab}}">
+          <div id="output">
+            <paper-textarea label="Your freshly-configured hitlist"></paper-textarea>
+            <div><em>Feel free to copy this config and paste it in the page designer in place of the existing tag, then save the page. Afterwards you may check "Hidden" for the original Reportal HitList in its general properties. And, yes, you are welcome. </em></div>
+          </div>
+          <div id="settings" class="layout vertical">
+            <paper-card heading="General Settings" elevation="0" class="flex" >
+              <div class="layout vertical start" width="300px">
+                <paper-input type="number" on-change="reflectToProperties" label="Frozen columns" value="{{frozenColumns}}" prop="frozenColumns" min="-1" max="{{columnProperties.length}}"></paper-input>
+                <paper-input type="number" on-change="reflectToProperties" label="Visible rows" value="{{visibleRows}}" prop="visibleRows" min="1"></paper-input>
+                <paper-toggle-button on-change="reflectToProperties" checked="{{assisted}}" prop="assisted">Assisted</paper-toggle-button>
+              </div>
+            </paper-card>
+            <paper-card heading="Columns" elevation="0" class="flex">
+              <paper-tabs scrollable selected="{{LS.columnTab}}" class="flex" style="margin: auto -32px;">
+                <template is="dom-repeat" items="[[columnProperties]]" as="tabColumn">
+                  <paper-tab>{{tabColumn.hidingToggleText}}</paper-tab>
+                </template>
+              </paper-tabs>
+              <iron-pages selected="{{LS.columnTab}}">
+                <template is="dom-repeat" items="{{columnProperties}}" as="tabContent" index-as="columnIndex">
+                  <div class="layout vertical start">
+                    <paper-input type="text" on-change="reflectToOriginal" label="Column title" value="{{tabContent.hidingToggleText}}" prop="hidingToggleText" idx="{{columnIndex}}"></paper-input>
+                    Column data prerocessor (renderer):
+                    <paper-radio-group on-iron-select="reflectToOriginal" selected="{{tabContent.renderer}}" prop="renderer" idx="{{columnIndex}}">
+                      <template is="dom-repeat" items="{{renderers}}" as="renderer">
+                        <paper-radio-button name="{{renderer.name}}">{{renderer.descr}}</paper-radio-button>
+                      </template>
+                    </paper-radio-group>
+                    <paper-toggle-button on-change="reflectToOriginal" checked="{{tabContent.hidable}}" prop="hidable" idx="{{columnIndex}}">Hidable</paper-toggle-button>
+                    <paper-toggle-button on-change="reflectToOriginal" checked="{{tabContent.hidden}}" prop="hidden" idx="{{columnIndex}}">Hidden</paper-toggle-button>
+                    <paper-toggle-button on-change="reflectToOriginal" checked="{{tabContent.sortable}}" prop="sortable" idx="{{columnIndex}}"> Sortable </paper-toggle-button>
+                  </div>
+                </template>
+              </iron-pages>
+
+            </paper-card>
+          </div>
+        </iron-pages>
+      </paper-card>
+    </template>
+
+    <div id="gridControls">
+      <paper-tooltip id="columnToggleTooltip" for="viewToggle" position="bottom">Switch display mode</paper-tooltip>
+      <paper-menu-button  horizontal-align="right" vertical-offset="52" id="viewToggle">
+        <paper-icon-button icon="chrome-reader-mode" class="dropdown-trigger"></paper-icon-button>
+        <paper-material class="dropdown-content">
+          <paper-listbox id="viewList" selected-attribute="selected" attr-for-selected="view" selected="{{defaultView}}">
+            <template is="dom-repeat" items="[[views]]" as="view">
+              <paper-icon-item view="[[view.view]]"><iron-icon icon="[[view.icon]]" item-icon></iron-icon><paper-item-body>[[view.label]]</paper-item-body></paper-icon-item>
+            </template>
+          </paper-listbox>
+        </paper-material>
+      </paper-menu-button>
+    </div>
+    <content id="cards" select="template.cards"></content>
+
+    <template is="dom-if" if="{{tableView}}" id="hitlistTemplate">
+      <vaadin-grid id="hitlist" visible-rows="{{visibleRows}}"></vaadin-grid>
+    </template>
+    <template is="dom-if" if="{{cardsView}}" id="cardsTemplate">
+      <div id="cardsPlaceholder" class="layout horizontal wrap"></div>
+    </template>
+
+    <div class=" horizontal end-justified layout" id="pagingRow" hidden$="[[!hitlistData.paging]]">
+      <div id="pagingInfo">{{hitlistData.pageInfo}} of {{hitlistData.length}}</div>
+      <paper-icon-button icon="chevron-left" disabled$="[[hitlistData.disablePrevButton]]" id="pagingBackward"></paper-icon-button>
+      <paper-icon-button icon="chevron-right" disabled$="[[hitlistData.disableNextButton]]" id="pagingForward"></paper-icon-button>
+    </div>
+    <paper-progress hidden$="[[!loading]]" indeterminate></paper-progress>
+  </template>
+</dom-module>
+
+<script>
+    (function() {
+      'use strict';
+      var GlobalHitlistConfig = {};
+      document.addEventListener("DOMContentLoaded", function() {
+        Polymer({
+          is: 'r-hitlist-setup',
+          listeners:{
+            'setupTemplate.dom-change':'setupHitlist',
+            'viewList.iron-select':'switchViews',
+            'hitlistTemplate.dom-change':'renderHitlist',
+            'cardsTemplate.dom-change':'renderCards'
+          },
+
+          behaviors: [
+            Polymer.IronResizableBehavior,
+            Polymer.RTableBehavior,
+            Polymer.Templatizer
+          ],
+
+          properties: {
+            /* if setup is passed, a hitlist configurator is going to be launched*/
+            setup:{
+              type:Boolean,
+              value:false
+            },
+            LS:{
+              type:Object
+            },
+            renderers:{
+              type:Array,
+              value:[{name:'html',descr:'Renders content as HTML'},{name:'striphtml',descr:'Strips any HTML, leaving only text'}]
+            },
+            hitlistOriginalConfig:{
+              type:Object,
+              notify:true,
+              //observer:'setupHitlist',
+              value:function(){
+                // this.async(function(){
+                var scripts = document.querySelectorAll('script');
+                if(scripts){
+                  var i=scripts.length;
+                  while(i--){
+                    if(scripts[i] && scripts[i].text && scripts[i].text.indexOf('Y.Reportal.HitList,')>-1){
+                      var hitlistScript = scripts[i].text;
+                      var re = /(Y\.Reportal\.HitList,)\s(.*?)\);/gi;
+                      var cfg = JSON.parse(re.exec(hitlistScript)[2]);
+                      return cfg;
+                    }
+                  }
+                } else {return {}}
+                //});
+              }
+            },
+            columnProperties:{
+              type:Array,
+              value:[],
+              notify:true
+            },
+            /*setting-up connection to server*/
+            dbType:{
+              type:String,
+              value:'Production' // Production/TestData
+            },
+            language:{
+              type:Number,
+              value:'9'
+            },
+            hitlist:String,
+            queryNormalized:{
+              type:Object,
+              value:{}
+            },
+            query:{
+              type:String,
+              observer:'_parseQuery'
+            },
+
+            longText:String,
+            longTextWidth:{
+              type:Number,
+              value:250
+            },
+            loading:{
+              type:Boolean,
+              value:false,
+              notify:true
+            },
+            previousSort:{
+              type:Object
+            },
+            columns:{
+              type:Array,
+              notify:true
+            },
+            checkallLabels:{
+              type:Array,
+              value:[]
+            },
+            views:{
+              type:Array,
+              value: [
+                {view:'table',label:'Table',icon:'view-list'},
+                {view:'cards',label:'Cards',icon:'view-module'},
+                {view:'map',label:'Map',icon:'room'}
+              ]
+            },
+            defaultView:{
+              type:String,
+              value:'table'
+            },
+            lastResponse:{type:Object,observer:'parseResponse'},
+            hitlistData:{type:Object,value:{data:[]},notify:true,observer:'parseData'}
+          },
+          switchViews:function(e){
+            this.views.forEach(function(item){
+              this[item.view+'View'] = (item.view===Polymer.dom(e).event.detail.item.view?true:false);
+            }.bind(this));
+          },
+          setupHitlist:function(){
+            if(this.setup){
+              var cfg=this.hitlistOriginalConfig;
+              console.log(cfg);
+              if(cfg){
+                this.errorNoConfig = false;
+                var columns=[];
+                for(var c=0;c<cfg.allColumns.length;c++){
+                  var col=cfg.allColumns[c];
+                  var cObj={hidable:true, name:col.key, hidingToggleText:col.label};
+                  if(col.allowHTML)cObj.renderer='html';
+                  if(col.hiddenByDefault)cObj.hidden=true;
+                  if(col.sortable)cObj.sortable=true;
+                  columns.push(cObj)
+                }
+                this.columnProperties = columns;
+                this.generateCode();
+              } else {
+                this.errorNoConfig = true;
+              }
+            }
+          },
+          generateCode:function(){
+            var str= '<' + this.localName +' hitlist="'+this.hitlistOriginalConfig.componentId+'"' + ' language="'+this.hitlistOriginalConfig.language+'"' + ' colattr-legacy="'+ this.serializeColumns(this.columnProperties) +'"' + ' frozen-columns="'+ this.frozenColumns + '"';
+            if(this.visibleRows){str += ' visible-rows="'+ this.visibleRows + '"';}
+            if(this.assisted){str += ' assisted';}
+            str+= '></'+ this.localName + '>';
+            this.$$('#setup #output paper-textarea').value = str;
+          },
+          serializeColumns:function(columns){
+            if(columns){
+              var c=[];
+              for(var i=0;i<columns.length;i++){
+                var a=[];
+                for(var k in columns[i]){
+                  switch(typeof columns[i][k]){
+                    case 'boolean': a.push(k);break;
+                    case 'string':case 'number':a.push(k+':'+columns[i][k]);break;
+                  }
+                }
+                c.push(a.join(';'));
+              }
+              return c.join('|');
+            }
+          },
+          reflectToOriginal:function(e){
+            var el=Polymer.dom(e).path[0];
+            console.log(Polymer.dom(e));
+            if(el.localName==='paper-input'){
+              this.set('columnProperties.'+el.getAttribute('idx')+'.'+el.getAttribute('prop'), el.value);
+            }
+            if(el.localName==='paper-toggle-button'){
+              this.set('columnProperties.'+el.getAttribute('idx')+'.'+el.getAttribute('prop'), el.checked);
+            }
+            if(el.localName==='paper-radio-group'){
+              this.set('columnProperties.'+el.getAttribute('idx')+'.'+el.getAttribute('prop'), Polymer.dom(e).event.detail.item.name);
+            }
+            this.generateCode();
+          },
+          reflectToProperties:function(e){
+            var el=Polymer.dom(e).path[0];
+            if(el.localName==='paper-input'){
+              this[el.getAttribute('prop')]=el.value;
+            }
+            if(el.localName==='paper-toggle-button'){
+              this[el.getAttribute('prop')]=el.checked;
+            }
+            this.generateCode();
+          },
+          initializeDefaultSetup:function(){
+            this.LS = {topTab:0,columnTab:0}
+          },
+          _parseQuery:function(query){
+            if(query && query.length>0){
+              var q=query.split('&'), ql= q.length, qn={};
+              while(ql--){
+                var qp = q[ql].split('=');
+                qn[qp[0].toLowerCase()]=qp[1];
+              }
+            }
+            this.queryNormalized = qn;
+          },
+          requestResponse:function(options){
+            if (this.queryNormalized && !this.queryNormalized.pageid && document.querySelector('#CurrentPageID')) {
+              this.queryNormalized.pageid=document.querySelector('#CurrentPageID').value;
+            }
+            var o= this.queryNormalized;
+            var _basePath = 'https://reportal.euro.confirmit.com/reportal/Report/'+ o.reportid + '/HitList/' + this.hitlist;
+            /*set common params*/
+            var params = {PageId: o.pageid, Preview: o.preview, Language:this.language, DbType:this.dbType};
+            /*if options are passed, add options*/
+            if(options && typeof options === Object){ console.log(options);
+              for (var attrname in options) {
+                params[attrname] = typeof options[attrname]==='boolean'?(options[attrname]?'1':'0'):options[attrname];
+              }
+            }
+            if (document.querySelector('#PageStateId')) {
+              params.pageStateId=document.querySelector('#PageStateId').value;
+            }
+            var sortingPagingValues = this.sortingPagingValues || {};
+
+            if (options && options.initialLoad === true && this.$$('#cardsPlaceholder')) {
+              this.$$('#cardsPlaceholder').innerHTML = '';
+            }
+
+            if (sortingPagingValues && sortingPagingValues.pagingValues && !isNaN(sortingPagingValues.pagingValues.pageNumber)) {
+              if (options && options.initialLoad === true) {
+                sortingPagingValues.pagingValues = null;
+              } else {
+                sortingPagingValues.pagingValues.pageNumber += sortingPagingValues.pagingValues.pagingForward ? 1 : -1;
+              }
+            }
+            params.sortingPagingValues=JSON.stringify(sortingPagingValues);
+            this.$.ajax.url = _basePath;
+            this.$.ajax.params = params;
+            this.$.ajax.method="GET";
+            this.$.ajax.generateRequest();
+          },
+          parseData:function(){
+            console.log(this.hitlistData);
+            //this.requestResponse({initialLoad:1});
+          },
+          parseResponse:function(r){
+            console.log(r);
+            r.sortingPagingValues.pagingValues.firstStartValue = this._fixJsonDate(r.sortingPagingValues.pagingValues.firstStartValue);
+            r.sortingPagingValues.pagingValues.lastStartValue = this._fixJsonDate(r.sortingPagingValues.pagingValues.lastStartValue);
+            this.sortingPagingValues=r.sortingPagingValues;
+            var sorting = [];
+            var sortBy = r.sortingPagingValues.sortingValues.sortBy;
+            for(var s in sortBy){
+              var column = this.colattr.map(function(col){return col.name}).indexOf(s);
+              var direction = sortBy[s]===-1?'desc':'asc';
+              sorting.push({column:column,direction:direction});
+            }
+            this.previousSort=sorting[0]; //store for comparing sorting in _sortChange
+            this.set('hitlistData.data', r.data);
+            this.set('hitlistData.sorting', sorting);
+            this.set('hitlistData.paging', r.sortingPagingValues.pagingValues);
+            this.set('hitlistData.disablePrevButton', r.sortingPagingValues.disablePrevButton);
+            this.set('hitlistData.disableNextButton', r.sortingPagingValues.disableNextButton);
+            this.set('hitlistData.length',r.sortingPagingValues.totalHits);
+            this.set('hitlistData.pageInfo', r.pageInfo);
+            this.async(function(){
+              if(this.tableView && this.$$('#hitlist')){
+                var grid = this.$$('#hitlist');
+                grid.items = r.data;
+                grid.size=r.data.length;
+                grid.refreshItems();
+                if(!this.visibleRows || (this.visibleRows && this.visibleRows>r.data.length)){grid.visibleRows=r.data.length} else if(this.visibleRows){grid.visibleRows=this.visibleRows;}
+                grid.then(function(){this.notifyResize()}.bind(this));
+              }
+              if(this.cardsView && this.$$('#cardsPlaceholder')){
+                this.renderCards();
+              }
+
+            });
+
+          },
+          renderHitlist:function(){
+            this.async(function(){
+              var grid=this.grid=this.$$('#hitlist');
+              if(grid && grid.columns && grid.columns.length===0){
+                /*generate columns*/
+                var longText=this.longText && this.longText.length>0?this.longText.toString().split(',').map(function(i){return parseInt(i)}):[];//convert longText string to array
+                this.colattr.forEach(function(item,index){
+                  if(item.renderer && this.renderer.hasOwnProperty(item.renderer)){item.renderer=this.renderer[item.renderer];}//convert renderer string to function from functions list
+                  if(this.longText.length>0 && longText.indexOf(index+1)!=-1){item.maxWidth = parseInt(this.longTextWidth);}
+                  grid.addColumn(item);
+                  grid.header.getCell(0,index).content = item.hidingToggleText; //replace header content with proper title
+                }.bind(this));
+                this.set('hitlistData.columns',this.colattr);
+                grid.frozenColumns = this.frozenColumns;
+                grid.addEventListener('sort-order-changed',function(e){return this._sortChange(e)}.bind(this));
+                if(this.hitlistData.data.length>0){
+                  grid.items = this.hitlistData.data;
+                  grid.size=this.hitlistData.data.length;
+                  if(!this.visibleRows || (this.visibleRows && this.visibleRows>this.hitlistData.data.length)){grid.visibleRows=this.hitlistData.data.length} else if(this.visibleRows){grid.visibleRows=this.visibleRows;}
+                }
+                /*sorting applied*/
+                grid.sortOrder = this.hitlistData.sorting;
+                grid.then(function(){this.notifyResize()}.bind(this));
+              }
+            })
+          },
+          renderCards:function(){
+            this.async(function(){
+              /*update template cards or whatever*/
+              if(this.$$('#cardsPlaceholder') && this.hitlistData && this.hitlistData.data){
+                var template = Polymer.dom(this.$.cards).getDistributedNodes()[0];
+                if(template){
+                  this.$$('#cardsPlaceholder').innerHTML='';
+                  this.templatize(template);
+                  var hlData = JSON.parse(JSON.stringify(this.hitlistData.data));
+                  hlData.forEach(function(item){
+                    for(var key in item){
+                      var val = item[key];
+                      var title = this.colattr.filter(function(col){return col.name===key});
+                      if(val && title && title.length>0){
+                        item[key] = {title: title[0].hidingToggleText, content: val}
+                      }
+                    }
+                    var clone = this.stamp({});
+                    clone.card = item;
+                    Polymer.dom(this.$$('#cardsPlaceholder')).appendChild(clone.root);
+                  }.bind(this));
+                  /*see if cards have tabs and select first*/
+                  var cardTabs = this.$$('#cardsPlaceholder').querySelectorAll('paper-tabs');
+                  if(cardTabs.length>0){
+                    [].slice.call(cardTabs).forEach(function(item){item.selected=0});
+                    var ironPages = this.$$('#cardsPlaceholder').querySelectorAll('iron-pages>*:first-child>template');
+                    [].slice.call(ironPages).forEach(function(item){item.if=true});
+                  }
+                  this.updateStyles();
+                  this.notifyResize()
+                }
+              }
+            })
+          },
+          ready:function(){
+            if(this.setup){// bypass all for setup
+              //this.setupHitlist(this.hitlistOriginalConfig);
+            } else {
+              /*get first data*/
+              this.requestResponse({initialLoad:true});
+              /* setup actions on paging Buttons*/
+              this.$.pagingForward.addEventListener('tap',function(){this._skipPage(true)}.bind(this));
+              this.$.pagingBackward.addEventListener('tap',function(){this._skipPage(false)}.bind(this));
+
+              /*grid.items = function(params,callback){
+               console.log(params);
+               if(!this.$.ajax.loading){
+               if(!this.lastResponse){this.requestResponse({initialLoad:1})} else if(!this.lastResponse.sortingPagingValues.disableNextButton){
+               this._skipPage(true);
+               }
+               }
+               this.$.ajax.removeEventListener('last-response-changed');
+               this.$.ajax.addEventListener('last-response-changed',function() {
+               console.log('response received');
+               console.log(this.lastResponse);
+               callback(this.lastResponse.data);
+               }.bind(this))
+               //console.log(params);
+               }.bind(this);*/
+              //this.requestResponse();
+
+            }
+
+          },
+          _skipPage: function(pagingForward, callback){
+            var spv = this.sortingPagingValues.pagingValues;
+            spv.pagingForward = pagingForward; /*if forward is needed then pass true, else null - backward*/
+            spv.startId = pagingForward ? spv.lastStartId : spv.firstStartId;
+            spv.startValue = pagingForward ? spv.lastStartValue : spv.firstStartValue;
+            this.requestResponse({isPaging: true}, callback);
+          },
+          _sortChange:function(e){
+            if(!this.previousSort || (this.previousSort && (this.previousSort.column !== e.detail.value[0].column || this.previousSort.direction !== e.detail.value[0].direction))){
+              if (this.loading){return;}
+              this.sortingPagingValues.sortingValues.sortBy={};
+              this.sortingPagingValues.sortingValues.sortBy[this.colattr[e.detail.value[0].column].name]=e.detail.value[0].direction==='asc'?1:-1;
+              console.log(this.sortingPagingValues);
+              this._clearPaging();
+              this.requestResponse({
+                isSorting: true,
+                initialLoad: true
+              });
+            }
+          },
+          _clearPaging: function() {
+            this.sortingPagingValues.pagingValues = null;
+          },
+          _fixJsonDate: function(jsonDate) {
+            if (!(jsonDate && Y.Lang.isFunction(jsonDate.replace))) {return jsonDate;}
+            var constructor = jsonDate.replace(new RegExp("^/Date\\(([-+]?\\d+)\\)/$"), "new Date($1)");
+            if (constructor == jsonDate) {return jsonDate;}
+            return eval(constructor);
+          }
+
+
+        });
+      });
+
+    })();
+  </script>

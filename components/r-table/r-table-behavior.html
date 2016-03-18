@@ -1,0 +1,454 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../polymer/polymer.html">
+
+
+<script>
+  var Confirmit = Confirmit || {};
+
+  /** @polymerBehavior Confirmit.RTableBehavior */
+  Confirmit.RTableBehavior = {
+    hostAttributes: {
+      'column-header-override': true
+    },
+    properties: {
+
+      /**
+       * The index of the last frozen columns in this grid. A frozen column will always stay visible in the grid viewport when the user scrolls the grid viewport horizontally.
+       * Setting the property to 0 means that no columns will be frozen, but the built-in selection checkbox column will still be frozen if it’s in use.
+       * Setting the count to -1 will unfreeze the selection column also.
+       *
+       * [See vaadin frozenColumns](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html#frozenColumns)
+       *
+       * @attribute frozen-columns
+       */
+      frozenColumns:{
+        type:Number,
+        value:0
+      },
+      /**
+       * the index of the clicked row (incrementation starts from 0). Works if `notifyClick` is specified
+       * */
+      clickedRow:{
+        type:Number,
+        value:null,
+        readOnly:true,
+        notify:true
+      },
+      /**
+       * the index of the clicked column (incrementation starts from 0). Works if `notifyClick` is specified.
+       * */
+      clickedColumn:{
+        type:Number,
+        value:null,
+        readOnly:true,
+        notify:true
+      },
+      /**
+       * Registers coordinates of the clicked cell for all cells in the table passed to `clickedRow` and `clickedColumn`
+       * */
+      notifyClick:{
+        type:Boolean,
+        value:false
+      },
+      /**
+       * Displays a search button in the toolbox which on-tap toggles search header for columns which have `searchable` property specified in `columnsLegacy`.
+       * */
+      filterable:{
+        type:Boolean,
+        value:false
+      },
+      /**
+       * Custom render function for the column’s data items. Default is undefined.
+       * Currently it is not possible to set the renderer declaratively.
+       *
+       * `renderer.html(cell)` Renders cell as HTML.
+       * `renderer.striphtml(cell)` Strips all HTML from the cell.
+       * @type {Object.<object>}
+       * @param cell Reference to the cell being rendered. See the documentation for cell for more details.
+       * */
+      renderer:{
+        type: Object,
+        value: function(){
+          return {
+            html:function(cell){
+              cell.element.innerHTML = cell.data;
+            },
+            striphtml:function(cell){
+              var tempEl = document.createElement('span'); tempEl.innerHTML = cell.data;
+              cell.element.innerHTML=tempEl.textContent.trim();
+            }
+          }
+        }
+      },
+      /**
+       * [See vaadin columns](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html#columns)
+       * @type {Array.<object>} columns The array of columns attached to the grid.
+       * */
+      columns:{
+        type:Array,
+        computed:'_computeColumnAttributes(columnsLegacy,renderer,_sortOrder,indexed)',
+        notify:true
+      },
+
+      /**
+       * You can specify properties of the columns of the Aggregated table that will be generated. Full list of properties can be seen in [vaadin-grid column spec](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html).
+       *```html
+       * <r-aggregated-table
+       *    columns-legacy="headerContent:New name for Header;
+       *                    sortable;hidable;flex:2|
+       *                    sortable;hidable;hidden;flex:1||
+       *                    maxWidth:300px;hidable">
+       * ...
+       * </r-aggregated-table>
+       * ```
+       * Reportal page editor doesn't allow inserting arrays/objects with double quotes yet, so it has to follow some synax to be deserialized.
+       * What does the value of `columns-legacy mean? We have specified some parameters to 3 colums, but from this code it's obvious that we have at least four.
+       * There can be more, but their parameters aren't specified.
+       *
+       * _So how does it work?_
+       *
+       * At first this string is split by '|' (_pipe_) and the pieces represent the string with attributes for a column.
+       * (as you can see from the example above, if you want to skip a column without passing any parameters to it, just put a pipe again like here: `...;flex:1||max-width:300px;...`)
+       *
+       * Then the string is split by ';' (_semicolon_) separating one attribute of this column from another.
+       *
+       * Finally it's split by ':' (_colon_) into key - value pair.
+       *
+       * _NOTE:_ `columns-legacy`'s value is already a string, so you don't need to escape strings in it with quotes. If there's a quote in the text, escape it with a back slash, like you normally would in JS.
+       *
+       * [See vaadin columns API (select 'column' in dropdown)](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html#columns)
+       *
+       *  ### Additional columns API:
+       *
+       *  `clickable {Boolean}` - whether the header will receive click to execute a custom function. **NOTE: this feature is incompatible with `sortable`.**
+       *
+       *  `clickableIcon {String}` icon placed tot he right of the column label. _Default: 'open-in-browser'_
+       *
+       *  `clickableFunction {Function}` pass a function that is executed on clicking the icon.
+       *
+       *  `clickableTooltip {String}` sets a tooltip under the clickable icon.
+       *
+       *  `sortDirection {String} (asc|desc)` sets sort direction for a `sortable` column. There may be up to 2 pre-sorted columns. The first sorted column takes precedence.
+       *
+       *  */
+      columnsLegacy:{
+        type:String,
+        value:''
+      },
+      /**
+       * Directive to override column headers of Aggregated Table with those defined in `columns` or `columnsLegacy` in `headerContent` property.
+       * */
+      columnHeaderOverride:{
+        type:Boolean,
+        value:false
+      },
+      /**
+       * Data that fills the rows of the table.
+       * */
+      data:{
+        type:Array,
+        value:[],
+        notify:true
+      },
+
+      actionData:{
+        type:Object,
+        observer:'_voiceControl'
+      },
+      indexed:{
+        type:Boolean,
+        value:false
+      },
+      indexedHeader:{
+        type:String,
+        value:'#'
+      },
+      selectionMode:{
+        type:String,
+        value: 'disabled'
+      },
+
+      /**
+       * Populated by `_computeColumnAttributes`, to generate a proper column toggle list for hidden columns
+       * */
+      _hidableColumns:{
+        type:Array,
+        observer:'_observeHidable'
+      },
+      /**
+       * Sets the height of the grid so that the specified amount of data rows is visible. Overrides any height specified in CSS.
+       *
+       *  [See vaadin visibleRows](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/#visibleRows)
+       *  @default 10
+       */
+      visibleRows:Number,
+      /**
+       * Enables voice assistant.
+       * */
+      assisted:{
+        type:Boolean,
+        value:false
+      },
+      _filterRowVisible:{
+        type:Boolean,
+        value:false
+      },
+      _sortOrder:{
+        type:Array,
+        value:[]
+      }
+
+    },
+    /**
+     * toggles visibility of a search row (under column headings) that contains inputs to filter data.
+     * */
+    toggleSearchRow:function(event){
+      if(!this._filterRowVisible){
+        this.grid.header.addRow();
+        var filterRow = this.grid.header.rowCount -1;
+        this.grid.header.setRowClassName(filterRow, 'filterRow');
+        this.columns.forEach(function(column,index){
+          if(column.filterable){
+            var cell = this.grid.header.getCell(filterRow, this.indexed?index +1:index);
+            if(this._elementType && column.type){ //this is a hitlist
+              switch(parseInt(column.type)){
+                case this._elementType.Single:
+                case this._elementType.Multi:
+                case this._elementType.GridElement:
+                case this._elementType.AdditionalColumn:
+                  cell.content = this._generateDropdownFilter(column);
+                  break;
+                case this._elementType.Date:
+                  cell.content = this._generateDateFilter(column);
+                  break;
+                case this._elementType.OpenNumeric:
+                  cell.content = this._generateDateFilter(column,true);
+                  break;
+                case this._elementType.MultiElement:
+                  cell.content = this._generateMultiElementFilter(column);
+                  break;
+                default:
+                  cell.content = this._generateOpenTextFilter(column);
+                  break;
+              }
+            } else { // this is an aggregated table
+              cell.content = this._generateOpenTextFilter();
+            }
+          }
+        }.bind(this));
+        this._filterRowVisible=true;
+
+      } else {
+        this.grid.header.removeRow(this.grid.header.rowCount - 1);
+        this.grid.items = Array.isArray(this.data)?this.data:this.data.data;
+        this._filterRowVisible=false;
+      }
+    },
+
+    _generateOpenTextFilter:function(){
+      var input = document.createElement('paper-input');
+      input.noLabelFloat = true; input.type='search'; input.style.width='30px'; input.placeholder = 'Filter';
+      input.addEventListener('value-changed', function(){this.filterData()}.bind(this));
+      return input
+    },
+
+    _computeColumnAttributes:function(legacy,renderer,sortOrder,indexed){
+      var attributes = [];
+      if(legacy && legacy.length>0){
+        var aColAttrs=legacy.split('|'), aL = aColAttrs.length, attrPairs, attrPair;
+        while(aL--){
+          var tempColProp ={};
+          attrPairs=aColAttrs[aL].split(';');
+          var apL = attrPairs.length;
+          while(apL--){
+            if(attrPairs[apL].length>0){
+              attrPair=attrPairs[apL].split(':');
+              tempColProp[attrPair[0]] = (attrPair[0]==='renderer'? (renderer.hasOwnProperty(attrPair[1])?renderer[attrPair[1]]:attrPair[1]):(attrPair.length>1 ? attrPair[1] : true));
+              if(attrPair[0]==='sortDirection'){sortOrder.unshift({column: (indexed?aL+1:aL), direction: attrPair[1]})}
+            }
+          }
+          attributes.unshift(tempColProp);
+        }
+      }
+      this._hidableColumns = attributes.filter(function(col){return col.hidable}).map(function(item){item.colIndex = this.indexed?attributes.indexOf(item)+1:attributes.indexOf(item); return item});
+      return attributes;
+    },
+
+    _voiceControl:function(){
+      if(this.actionData.action && this.actionData.action.indexOf('table.')>-1){
+        console.log('we have the action');
+        var params = this.actionData.parameters;
+        var action = this.actionData.action.split('.')[1];
+        return this[action](params);
+      }
+    },
+    /**
+     * ### VoiceControl
+     *  `columnNumber` positive Number; -1 = last visible column
+     *
+     *  `sortOrder` {String} asc | desc
+     *
+     * @param {{columnNumber: Number, sortDirection: String, columnNumber1: Number, sortDirection1: String}} params
+     * */
+    sortColumn:function(params){
+      console.log(params);
+      if(params.sortDirection && params.sortDirection.length>0 && params.columnNumber.col1){
+
+        if(!params.columnNumber1 && !params.sortDirection1){
+          console.log('first')
+          var idx = this._getColumnIndex(params.columnNumber.col1);
+          if( this.grid.columns[idx] && this.grid.columns[idx].sortable){this.grid.sortOrder = [{column: idx, direction:params.sortDirection}];}
+        } else {
+          console.log('first')
+          var idx1 = this._getColumnIndex(params.columnNumber.col1);
+          var idx2 = this._getColumnIndex(params.columnNumber1.col1);
+          console.log([{column: idx1, direction:params.sortDirection},{column: idx2, direction:params.sortDirection1}]);
+          if( this.grid.columns[idx1] && this.grid.columns[idx1].sortable && this.grid.columns[idx2] && this.grid.columns[idx2].sortable){
+            this.grid.sortOrder = [{column: idx1, direction:params.sortDirection},{column: idx2, direction:params.sortDirection1}];}
+        }
+
+      }
+    },
+    /**
+     * ### VoiceControl
+     *  `columnNumber` positive Number; -1 = last visible column
+     *
+     * @param {{columnNumber: Number}} params
+     * */
+    freezeColumn:function(params){
+      console.log(params);
+      if(params.columnNumber && params.columnNumber.col1){
+        var idx = this._getColumnIndex(params.columnNumber.col1);
+        console.log(idx+1);
+        if(params.columnNumber.col1 !== '-1' && this.grid.columns[idx]){this.grid.frozenColumns = idx+1;}
+      }
+    },
+    /**
+     * ### VoiceControl
+     * @param {Object} params
+     * @default null
+     * */
+    unfreezeColumns:function(params){
+      this.grid.frozenColumns = 0;
+    },
+    /**
+     * ### VoiceControl
+     *  `columnNumber` positive Number; -1 = last visible column
+     *
+     * @param {{columnNumber: Number}} params
+     * */
+    hideColumn:function(params){
+      console.log(params);
+      if(params.columnNumber && params.columnNumber!==null){
+        for(var col in params.columnNumber){
+          var idx = this._getColumnIndex(params.columnNumber[col]);
+          if(this.grid.columns[idx].hidable)this.grid.columns[idx].hidden = true;
+        }
+      }
+      this._updateFilteredData();
+    },
+    /**
+     * `_observeHidable` sets a list of hidable-columns
+     * */
+    _observeHidable:function(hidable){
+      if(hidable && hidable.length>0){
+        var columnList = this.querySelector('#columnToggle paper-listbox.dropdown-content');
+        columnList.selectedValues = hidable.map(function(item,index){if(!item.hidden){return (item.colIndex).toString()}});
+        columnList.addEventListener('iron-select',function(e){this._reflectColumnToggle(e)}.bind(this));
+        columnList.addEventListener('iron-deselect',function(e){this._reflectColumnToggle(e)}.bind(this));
+      }
+    },
+    /**
+     * Reflects columns toggling to vaadin-grid (replaces default column toggler to be able to move the controls into the card drawer). Updates filtered columns if filter row is displayed
+     */
+    _reflectColumnToggle:function(event){
+      if(this.grid){
+        var item=Polymer.dom(event).event.detail.item;
+        var col=parseInt(item.attributes.getNamedItem('value').value);
+        this.grid.columns[this.indexed? col +1:col].hidden=item.attributes.getNamedItem('selected')?false:true;
+        if(!this.hitlist){this._updateFilteredData(col);}
+      }
+    },
+    /**
+     * Updates data-filtering for columns that had active filters and were hidden/shown
+     * @method _updateFilteredData
+     * */
+    _updateFilteredData:function(index){
+      if(this.filterable && this._filterRowVisible && typeof this.filterData ==='function'){
+        if(index){if(this.grid.columns[this.indexed? index +1:index].filterable){this.filterData();}} else {this.filterData();}
+      }
+    },
+    /**
+     * ### VoiceControl
+     *  `columnNumber` positive Number; -1 = last visible column
+     *
+     * @param {{columnNumber: Number}} params
+     * */
+    showAllColumns:function(params){
+      console.log(params);
+      this.grid.columns.forEach(function(column){column.hidden = false});
+    },
+    /**
+     * ### VoiceControl
+     *  `params.columnNumber` {Number} (-1 = last)
+     *
+     * @param {Object} columnNumber
+     * */
+    _getColumnIndex:function(columnNumber){
+      var columns = this.grid.columns.filter(function(column){return !column.hidden});
+      var col = parseInt(columnNumber)>0?parseInt(columnNumber)-1:columns.length-1;//virtual  index against visible columns
+      return parseInt(this.grid.columns.indexOf(columns[col]));
+    },
+    /**
+     * Converts array["key","value"] to object {key:"value"} respecting int,string,bool
+     */
+    _a2o:function(obj,key,val){
+      if(obj && key){
+        if(val && val.length>0){
+          if(key!=='renderer'){
+            obj[key]=this._isInt(val)?parseInt(val):val;
+          } else { // process renderers via this.renderer.Renderer_name property
+            obj[key]=this.renderer[val];
+          }
+        } else {obj[key]=true;} //it's a boolean
+      }
+    },
+    /**
+     * Checks if value is a number
+     */
+    _isInt:function(val){
+      return (!isNaN(parseInt(val)) && parseInt(val).toString().length===val.length);
+    },
+    _getImmediateChildrenByName:function(source, tagname){
+      return Polymer.dom(source).children.filter(function(item){return item.localName===tagname});
+    },
+    /**
+     * Sets `clickedCell` and `clickedRow` properties to the index of the clicked cell in a row respectively. If the `indexed` property is specified, that column is disarded from the results.
+     * Works if `notifyClick` is `true`
+     * @method _clickedCellCoordinates
+     * @param {MouseEvent} event is a `tap` event on the cell.
+     * */
+    _clickedCellCoordinates:function(event){
+      var el = Polymer.dom(event).rootTarget;
+      var cell = (el.localName==='td' && el.classList.contains('vaadin-grid-cell'))? el : ((el.parentNode.localName==='td' && el.parentNode.classList.contains('vaadin-grid-cell'))? el.parentNode: null);
+      if(this.notifyClick && cell){
+        var row = [].slice.call(cell.parentNode.parentNode.children).indexOf(cell.parentNode);
+        var column = [].slice.call(cell.parentNode.children).indexOf(cell);
+        this._setClickedRow(row);
+        if(this.indexed && (column - 1) >0){this._setClickedColumn(column - 1)} else if(!this.indexed){this._setClickedColumn(column)}
+      }
+    }
+
+  };
+
+</script>
+

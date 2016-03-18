@@ -1,0 +1,835 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../r-card/r-card-behavior.html">
+<link rel="import" href="../r-card/r-card.html">
+<link rel="import" href="../vaadin-grid/vaadin-grid.html">
+<link rel="import" href="./r-table-behavior.html">
+<link rel="import" href="./vaadin-grid-icons-fix.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-progress/paper-progress.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../iron-page-url/iron-page-url.html">
+<link rel="import" href="../iron-pages/iron-pages.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="../paper-date-picker/paper-date-picker.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../r-dropdown/r-dropdown.html">
+
+
+<!--
+An element to display Reportal HitLits using HitList v2 API.
+It can:
+** make columns: sortable, hidable/hidden, filterable, pinned;
+** limit the amount of records to be displayed;
+** allow row(s) selection;
+** override column headers.
+
+It's based off [`vaadin-grid`](https://github.com/vaadin/vaadin-grid) element by Vaadin team ([Apache 2.0 license](https://github.com/vaadin/vaadin-grid/blob/master/LICENSE)).
+See `vaadin-grid` [API docs](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html) and [Code Examples](https://cdn.vaadin.com/vaadin-elements/latest/vaadin-grid/demo/) to get a deeper insight into its functionality, if you want to modify or extend it.
+
+Example:
+```html
+    <r-hitlist></r-hitlist>
+```
+@group Reportal Elements
+@element r-hitlist
+@demo demo/r-hitlist.html
+-->
+<dom-module id="r-hitlist">
+  <template strip-whitespace>
+    <style include="paper-date-picker-dialog-style"></style>
+    <style include="vaadin-grid-icons-fix">
+      :host{
+        display:block;
+        position:relative;
+      }
+      :host r-card {--r-card-content:{padding:0};}
+      :host::before{
+        content: 'r-hitlist';
+        display:none;
+        @apply(--r-hitlist-before);
+      }
+
+      #columnToggle .dropdown-content paper-icon-item,
+      vaadin-grid ::content  r-dropdown .dropdown-content paper-icon-item,
+      vaadin-grid ::content  r-dropdown .dropdown-content paper-item{
+        --paper-item-min-height:32px;
+        min-height:32px !important;
+        cursor: pointer;
+        --paper-item-selected-weight:normal;
+        --paper-icon-item:{font-size:13px;};
+        --paper-item:{font-size:13px;};
+      }
+      #toolbox paper-menu-button{ padding: 8px 0; }
+      #toolbox paper-icon-button{margin: auto 0;}
+      #columnToggle .dropdown-content paper-icon-item ::content iron-icon{opacity: 0}
+      #columnToggle .dropdown-content paper-icon-item[selected] ::content iron-icon{opacity: 1}
+      :host vaadin-grid ::content thead>tr.vaadin-grid-row {height:40px !important}
+      :host vaadin-grid ::content thead>tr.vaadin-grid-row>th {height:40px !important}
+      :host vaadin-grid ::content .filterRow>th paper-input {
+        --paper-input-container:{padding:0 !important};
+        --paper-input-container-input:{font-size:13px !important};
+        @apply(--layout-flex);
+      }
+      :host vaadin-grid ::content .filterRow>th paper-input paper-input-container input {
+        font-size:13px !important;
+      }
+      :host vaadin-grid ::content .filterRow>th> r-dropdown {
+        --paper-input-container-input:{font-size:13px !important};
+        @apply(--layout-flex);
+      }
+      :host vaadin-grid ::content .filterRow>th> r-dropdown paper-input paper-input-container input {
+        font-size:13px !important;
+      }
+      :host vaadin-grid ::content .filterRow>th> .dateOrNumeric {
+        @apply(--layout-horizontal);
+      }
+
+      :host vaadin-grid ::content .vaadin-grid-sidebar {display:none}
+
+
+      :host div#pagingInfo{padding:0 24px}
+      :host #pagingRow{
+        height:56px;
+        color:rgba(0,0,0,0.54);
+        font-size:12px;
+        font-weight:500;
+        @apply(--layout-horizontal);
+        @apply(--layout-end-justified);
+
+      }
+      :host #pagingRow>*{@apply(--layout-self-center);}
+      :host #pagingRow #pagingForward{margin-right:6px; margin-left:4px}
+      :host #pagingRow #pagingBackward{margin-right:8px;}
+
+      :host paper-progress{
+        --paper-progress-active-color: var(--accent-color,#e91e63);
+        position:absolute;
+        top:0px;
+        width:100%;
+      }
+      #cardsPlaceholder {
+        @apply(--layout-horizontal);
+        @apply(--layout-wrap);
+      }
+    </style>
+    <iron-ajax id="ajax" url="" handle-as="json" last-response="{{lastResponse}}" verbose loading="{{loading}}"></iron-ajax>
+    <iron-page-url query="{{query}}"></iron-page-url>
+
+    <content id="cards" select="template.cards"></content>
+
+    <r-card heading$="[[heading]]" id="card" toolbox assisted$="[[assisted]]">
+      <div class="card-content">
+        <template is="dom-if" if="{{tableView}}" id="hitlistTemplate">
+          <vaadin-grid id="grid" visible-rows="{{visibleRows}}"></vaadin-grid>
+        </template>
+        <div id="cardsPlaceholder" hidden="[[!cardsView]]"></div>
+
+        <div id="pagingRow" hidden$="[[!data.paging]]">
+          <div id="pagingInfo">{{data.pageInfo}} of {{data.length}}</div>
+          <paper-icon-button icon="chevron-left" disabled$="[[data.disablePrevButton]]" id="pagingBackward"></paper-icon-button>
+          <paper-icon-button icon="chevron-right" disabled$="[[data.disableNextButton]]" id="pagingForward"></paper-icon-button>
+        </div>
+        <paper-progress hidden$="[[!loading]]" indeterminate></paper-progress>
+
+        <paper-dialog id="dialog" class="paper-date-picker-dialog" modal on-iron-overlay-closed="dismissDialog">
+          <paper-date-picker id="picker"></paper-date-picker>
+          <div class="buttons">
+            <paper-button dialog-dismiss on-tap="clearDialog">Clear</paper-button>
+            <paper-button dialog-dismiss>Cancel</paper-button>
+            <paper-button dialog-confirm>OK</paper-button>
+          </div>
+        </paper-dialog>
+      </div>
+      <div id="toolbox">
+        <paper-tooltip for="searchButton">Toggle filter controls</paper-tooltip>
+        <paper-icon-button icon="search" id="searchButton" hidden$="[[!filterable]]" on-tap="toggleSearchRow"></paper-icon-button>
+
+        <paper-tooltip for="viewToggle" position="bottom">Switch display mode</paper-tooltip>
+        <paper-menu-button  horizontal-align="right" vertical-offset="52">
+          <paper-icon-button icon="chrome-reader-mode" class="dropdown-trigger" id="viewToggle"></paper-icon-button>
+          <paper-listbox id="viewList" selected-attribute="selected" attr-for-selected="view" selected="{{defaultView}}" class="dropdown-content">
+            <template is="dom-repeat" items="[[views]]" as="view">
+              <paper-icon-item view="[[view.view]]"><iron-icon icon="[[view.icon]]" item-icon></iron-icon><paper-item-body>[[view.label]]</paper-item-body></paper-icon-item>
+            </template>
+          </paper-listbox>
+        </paper-menu-button>
+
+        <paper-tooltip for="colTrigger" position="bottom" offset="0">Toggle columns visibility</paper-tooltip>
+        <paper-menu-button horizontal-align="right" vertical-offset="52" id="columnToggle" ignore-select>
+          <paper-icon-button icon="view-column" class="dropdown-trigger" id="colTrigger"></paper-icon-button>
+          <paper-listbox selected-attribute="selected" multi class="dropdown-content" attr-for-selected="value">
+            <template is="dom-repeat" items="[[_hidableColumns]]" as="column">
+              <paper-icon-item value$="[[column.colIndex]]"><iron-icon icon="check" item-icon></iron-icon>[[column.hidingToggleText]]</paper-icon-item>
+            </template>
+          </paper-listbox>
+        </paper-menu-button>
+      </div>
+    </r-card>
+
+
+  </template>
+</dom-module>
+
+<script>
+  (function() {
+    'use strict';
+    Polymer({
+      is: 'r-hitlist',
+      listeners:{
+        'viewList.iron-select':'switchViews',
+        'hitlistTemplate.dom-change':'_renderHitlist',
+        'cardsView-enable':'renderCards'
+      },
+
+      behaviors: [
+        Polymer.IronResizableBehavior,
+        Confirmit.RTableBehavior,
+        Confirmit.RCardBehavior,
+        Polymer.Templatizer
+      ],
+
+      properties: {
+        /**
+         * type of DataBase `(Production|TestData)`
+         * */
+        dbType:{
+          type:String,
+          value:'Production' // Production/TestData
+        },
+        /**
+         * Current language as Confirmit language code
+         * */
+        language:{
+          type:Number,
+          value:'9'
+        },
+        /**
+         * ID of the HitList component
+         * */
+        hitlist:String,
+        /**
+         * URL query as an object, where keys are in lower-case
+         * */
+        queryNormalized:{
+          type:Object,
+          computed:'_parseQuery(query)'
+        },
+
+        query:{
+          type:String,
+          //observer:'_parseQuery'
+        },
+        /**
+         * Comma-separated string listing indices (starting with 1) of columns containing long text. These are trimmed with ellipsis.
+         * */
+        longText:String,
+        /**
+         * Max-width of a long-text column. As a shorthand to specifying a maxWidth in the column's properties.
+         * */
+        longTextWidth:{
+          type:Number,
+          value:250
+        },
+        /**
+         * Status of fetching data from server
+         * */
+        loading:{
+          type:Boolean,
+          value:false,
+          notify:true
+        },
+        previousSort:{
+          type:Object
+        },
+        /**
+         * Views available to present data in (table|cards|map)
+         * */
+        views:{
+          type:Array,
+          value: [
+            {view:'table',label:'Table',icon:'view-list'},
+            {view:'cards',label:'Cards',icon:'view-module'},
+            {view:'map',label:'Map',icon:'room'}
+          ]
+        },
+        /**
+         * Data-represenation mode that the user sees on initial element load
+         * */
+        defaultView:{
+          type:String,
+          value:'table'
+        },
+        /**
+         * Object containing last set of data from the server
+         * */
+        lastResponse:{
+          type:Object,
+          observer:'_routeResponse'
+        },
+        /**
+         * aggregated data for the HitList
+         * */
+        /*hitlistData:{
+         type:Object,
+         value:{data:[]},
+         notify:true
+         },*/
+        data:{
+          type:Object,
+          value:{data:[]},
+          notify:true
+        },
+        _elementsState:{
+          type:Object,
+          value:function(){
+            return {
+              grid:undefined
+            }
+          }
+        },
+        /**
+         * type of column data for HitList, defined as `type` in `columns` properties
+         * */
+        _elementType:{
+          type:Object,
+          value:function(){
+            return {
+              "Date":0,
+              "OpenText":1,
+              "OpenNumeric":2,
+              "Single":3,
+              "Multi":4,
+              "MultiElement":5,
+              "GridElement":6,
+              "SurveyLink":7,
+              "NotSupported":8,
+              "AdditionalColumn":9,
+              "Geography":10,
+              "ImageUpload":11
+            }
+          }
+        },
+        /**
+         * Searchable List Operators
+         * */
+        _op:{
+          type:Object,
+          value:function(){
+            return {
+              "Equal":0,
+              "LessThan":1,
+              "GreaterThan":2,
+              "LessThanOrEqual":3,
+              "GreaterThanOrEqual":4,
+              "LIKE":5,
+              "IS":6,
+              "ISNOT":7,
+              "IsNull":8,
+              "NotEqual":9,
+              "IN":10,
+              "Between":11,
+              "NotIn":12,
+              "SubCriteria":13,
+              "LessThanOrExactEqual":14,
+              "GreaterThanOrExactEqual":15,
+              "IsNotNull":16
+            }
+          }
+        },
+        _searchValues:{
+          type:Array,
+          value: function(){
+            return [];
+          }
+        },
+        _resolveAutocomplete:{
+          type:Function,
+          value:function(){}
+        }
+
+      },
+      ready:function(){
+        /*get first data*/
+        this.requestResponse({initialLoad:true});
+        /* setup actions on paging Buttons*/
+        this.$.pagingForward.addEventListener('tap',()=>{this._skipPage(true)});
+        this.$.pagingBackward.addEventListener('tap',()=>{this._skipPage(false)});
+      },
+      /* If response is Array, it was requested by Autocomplete for column filters, else it's HitList data*/
+      _routeResponse:function(response){
+        if(response){
+          if(response.hasOwnProperty('ResultSet')){
+            this._resolveAutocomplete(response);
+          } else {
+            this.parseResponse(response);
+          }
+        }
+      },
+      /**
+       * get a search value based on entry id
+       * @return {Array}
+       * */
+      _findSearchValue:function(id){
+        return this._searchValues.filter(function(item){return item.id===id});
+      },
+      /**
+       * generates filter input for open-text questions
+       * @return {HTMLElement}
+       * */
+      _generateOpenTextFilter:function(){
+        var input = document.createElement('paper-input');
+        input.noLabelFloat = true; input.type='search'; input.style.width='30px'; input.placeholder = 'Filter';
+        input.addEventListener('blur', (e)=>{this.filterData(e)});
+        //input.addOwnKeyBinding('enter', this.filterData);
+        return input
+      },
+      /**
+       * generates filter input for questions that have precodes and support autocomplete
+       * @param {Object} column  item from `columns`
+       * @return {HTMLElement}
+       *
+       * */
+      _generateDropdownFilter:function(column){
+        var dd = document.createElement('r-dropdown');
+        dd.noLabelFloat=true; dd.placeholder='Filter'; dd.style="width:30px;";
+        dd.addEventListener('tap',(e)=>{this._populateDropdownFilter(e,column);});
+        dd.addEventListener('iron-select',(e)=>{this.filterData(e)});
+        return dd;
+      },
+      /**
+       * fills dropdown filter with precodes from question.
+       * */
+      _populateDropdownFilter:function(event,column){
+        var dd = Polymer.dom(event).path.filter(function(dr){return dr.localName ==='r-dropdown'})[0];
+        if(Polymer.dom(dd).children.length===0){
+          this._fetchItems(column.name)
+                  .then(function(response){
+                    var listbox = document.createElement('paper-listbox');
+                    listbox.classList.add('dropdown-content');
+                    listbox.style='max-height:350px;overflow-x:hidden;';
+                    listbox.attrForSelected='value';
+                    response.ResultSet.Result.forEach(function(item){
+                      var li=document.createElement('paper-item');
+                      //Polymer.dom(li).setAttribute('value',item.ID);
+                      li.value=item.ID;
+                      li.textContent = item.Title;
+                      li.style='min-height:32px;font-size:13px;padding-right:24px';
+                      Polymer.dom(listbox).appendChild(li);
+                    });
+                    Polymer.dom(dd).appendChild(listbox);
+                    dd.open();
+                  }.bind(this));
+        }
+      },
+      /**
+       * Fetches precodes for autocomplete dropdowns from server. On resolve returns the `iron-ajax` `response` `Event`
+       * @method _fetchItems
+       * @param {String} name question ID in the column
+       * @return {Promise}
+       * */
+      _fetchItems:function(name){
+        return new Promise(function(resolve,reject){
+          this._resolveAutocomplete = resolve;
+          var ajax = this.$.ajax;
+          ajax.url='/reportal/AutoComplete.aspx';
+          ajax.handleAs='json';
+          ajax.params={
+            ac_sv:'__all__',
+            ac_ct: 'hitlistcriteria;'+this.hitlist+';'+name,
+            ac_pn: location.pathname,
+            ac_itd: 50,
+            ac_ipp: 50
+          };
+          if(this.queryNormalized){
+            var q = this.queryNormalized;
+            ajax.params.ReportId = q.reportid;
+            ajax.params.Preview = q.preview;
+            ajax.params.PageId = q.pageid;
+          }
+          //ajax.addEventListener('response', resolve);
+          ajax.generateRequest();
+        }.bind(this));
+      },
+
+      /**
+       * Is triggered every time when `_searchValues` array change
+       * */
+      _filterTrigger:function(){
+        this._clearPaging();
+        this.requestResponse({
+          isSorting: true,
+          search: JSON.stringify(this._searchValues.slice()),
+          initialLoad: true
+        });
+      },
+      /**
+       * fetches all entries from `.filterRow` and modifies `_searchValues` with !null values of fields.
+       * */
+      filterData:function(e){
+        var trigger = Polymer.dom(e).rootTarget;
+        var filterable = this.grid.columns.filter(function(column){return column.filterable});
+        filterable.forEach(function(col){
+          var cell=this.grid.header.getCell(this.grid.header.rowCount-1, col.colIndex);
+          var value = '';
+          switch (parseInt(col.type)) {
+            case this._elementType.Single:
+            case this._elementType.Multi:
+            case this._elementType.GridElement:
+            case this._elementType.AdditionalColumn:
+              value = cell.content.selectedItem?cell.content.selectedItem.value:null; break;
+            //TODO: rethink the folowing
+            case this._elementType.Date:
+              value = [].slice.call(Polymer.dom(cell.content).querySelectorAll('paper-input')).filter((element)=>{return element.value.length>0});
+              break;
+            case this._elementType.OpenNumeric:
+              value = Polymer.dom(cell.content).querySelectorAll('paper-input');
+              [].slice.call(value).forEach((input)=>{input.output=input.value});
+          break;
+          case this._elementType.MultiElement:
+          value = '';
+          break;
+          default:
+          value = cell.content.value;
+          break;
+        }
+          var searchValue = this._findSearchValue(col.name)[0];
+
+          if(value && value.length>0){
+
+            if(!searchValue){
+              searchValue = {
+                type: parseInt(col.type),
+                label: col.hidingToggleText,
+                id: col.name
+              }
+            }
+            //TODO:process the following hl.js line 520
+            switch (parseInt(col.type)) {
+              case this._elementType.Date:
+              case this._elementType.OpenNumeric:
+                /**
+                 * basic idea is to provide tow inputs: From and To.
+                 * If `from` is empty and `to` is  filled: op=this._op.Before;
+                 * If `from` is filled and `to` is  empty: op=this._op.After;
+                 * If both `from`  and `to` are filled: op=this._op.Between;
+                 * */
+                var inputs=Polymer.dom(cell.content).querySelectorAll('paper-input');
+                searchValue.op = (inputs[0].output.length>0 ? (inputs[1].output.length>0?this._op.Between : this._op.GreaterThanOrEqual ):this._op.LessThanOrEqual);
+                searchValue.val1 = (inputs[0].output.length>0?[inputs[0].output] : []);
+                searchValue.val2 = (searchValue.op === this._op.Between) ? [inputs[1].output] : [];
+                if (searchValue.val1[0] === "" && searchValue.val2[0] === "" && this._findSearchValue(col.name)[0]) {
+                  this.splice('_searchValues', this._searchValues.indexOf(this._findSearchValue(col.name)[0]),1);
+                }
+                break;
+              default:
+                searchValue.op = (parseInt(col.type) === this._elementType.OpenText) ? this._op.LIKE : this._op.Equal;
+                searchValue.val1 = [value];
+                searchValue.val2 = null;
+                /*if (hiddenValue) {
+                 searchValue.precode = hiddenValue;
+                 }*/
+                break;
+            }
+            var val2update = this._findSearchValue(col.name)[0];
+            if(val2update){val2update=searchValue} else {this.push('_searchValues',searchValue)}
+
+          } else {
+            if (searchValue) {
+              this.splice('_searchValues', this._searchValues.indexOf(searchValue),1);
+            }
+          }
+        }.bind(this));
+        this._filterTrigger();
+      },
+      /**
+       * creates from/to openNumeric/date inputs
+       * */
+      _generateDateFilter:function(column,isNumeric){
+        var span = document.createElement('span');
+        span.classList.add('dateOrNumeric');
+        var from = document.createElement('paper-input');
+        from.noLabelFloat = true; from.type='number';  from.style.width='60px'; from.style.paddingRight='5px'; from.placeholder = 'From';
+        from.output='';
+        var to = document.createElement('paper-input');
+        to.noLabelFloat = true; to.type='number';  to.style.width='60px'; to.placeholder = 'To';
+        to.output='';
+        if(!isNumeric){
+          from.addEventListener('focus',this.showDialog);
+          from.readonly=true;
+          from.type='text';
+          to.addEventListener('focus',this.showDialog);
+          to.readonly=true;
+          to.type='text';
+          from.addEventListener('value-changed',(e)=>{this.filterData(e)});
+          to.addEventListener('value-changed',(e)=>{this.filterData(e)});
+        } else {
+          from.addEventListener('blur',(e)=>{this.filterData(e)});
+          to.addEventListener('blur',(e)=>{this.filterData(e)});
+        }
+        span.appendChild(from);
+        span.appendChild(to);
+        return span
+
+      },
+      /**
+       * Shows calendar dialog
+       * */
+      showDialog:function(e){
+        var input = Polymer.dom(e).rootTarget;
+        var host=Polymer.dom(e).path.filter((item)=>{return item.localName==='r-hitlist';})[0];
+        if(input.date){host.$.picker.date = input.date}
+        host.$.dialog.refInput = input;
+        host.$.dialog.toggle();
+      },
+      /**
+       * closes calendar dialog
+       * */
+      dismissDialog: function(e) {
+        if (e.detail.confirmed) {
+          //TODO: add clear date functionality
+          var target = Polymer.dom(e).rootTarget.refInput;
+          target.date = this.$.picker.date;
+          target.output = this.$.picker.dateFormat(this.$.picker.date,'l');
+          target.value = this.$.picker.dateFormat(this.$.picker.date,'MMM D,\'YY');
+        }
+      },
+      /**
+       * clears value of date-input via a 'Clear' button inside the calendar dialog
+       * */
+      clearDialog:function(e){
+        var host=Polymer.dom(e).path.filter((item)=>{return item.localName==='r-hitlist';})[0];
+        var target = Polymer.dom(e).path.filter((item)=>{return item.id==='dialog'})[0].refInput;
+        host.$.dialog.toggle();
+        target.date = new Date();
+        target.output = '';
+        target.value = '';
+      },
+      /**
+       * creates an imput for Multi-element filter
+       * */
+      _generateMultiElementFilter:function(){},
+
+      /**
+       * initializes Hitlist
+       * */
+      _renderHitlist:function(){
+        if(this.$$('#grid')){
+          //this.async(function(){
+          this.grid= this.grid || this.$$('#grid');
+          if(this.grid.columns.length===0){
+            /*generate columns*/
+            var longText=this.longText && this.longText.length>0?this.longText.toString().split(',').map(function(i){return parseInt(i)}):[];//convert longText string to array
+            this.columns.forEach(function(item,index){
+              //if(item.renderer && this.renderer.hasOwnProperty(item.renderer)){item.renderer=this.renderer[item.renderer];}//convert renderer string to function from functions list
+              if(longText.length>0 && longText.indexOf(index+1)!=-1){item.maxWidth = parseInt(this.longTextWidth);}
+              this.grid.addColumn(item);
+              this.grid.header.getCell(0,index).content = item.hidingToggleText; //replace header content with proper title
+            }.bind(this));
+            this.set('data.columns',this.columns);
+            this.grid.frozenColumns = this.frozenColumns;
+            this.grid.addEventListener('sort-order-changed',function(e){this._sortChange(e)}.bind(this));
+            if(this.data.data.length>0){
+              this.grid.items = this.data.data;
+              this.grid.size=this.data.data.length;
+              if(!this.visibleRows || (this.visibleRows && this.visibleRows>this.data.data.length)){this.grid.visibleRows=this.data.data.length} else if(this.visibleRows){this.grid.visibleRows=this.visibleRows;}
+            }
+            /*sorting applied*/
+            if(this._sortOrder.length>0){this.grid.sortOrder = this._sortOrder};
+          }
+          //})
+
+        }
+      },
+      /**
+       * Switches display mode to cards/table/map
+       * */
+      switchViews:function(e){
+        this.views.forEach(function(item){
+          this[item.view+'View'] = item.view===Polymer.dom(e).event.detail.item.view;
+          this.fire(item.view+'View-enable');
+        }.bind(this));
+      },
+      /**
+       * Converts all params from query into an object with lower-case keys
+       * @method _parseQuery
+       * @param {String} query received from `<iron-page-url>`
+       * @return {Object}
+       * */
+      _parseQuery:function(query){
+        if(query && query.length>0){
+          var q=query.split('&'), ql= q.length, qn={};
+          while(ql--){ var qp = q[ql].split('='); qn[qp[0].toLowerCase()]=qp[1]; }
+        }
+        return qn;
+      },
+      /**
+       * queries HitList API
+       * */
+      requestResponse:function(options){
+        var o= this.queryNormalized;
+        if(o && o.reportid && this.hitlist){
+          if (!o.pageid && document.querySelector('#CurrentPageID')) {
+            o.pageid=document.querySelector('#CurrentPageID').value;
+          }
+          var _basePath = 'https://reportal.euro.confirmit.com/reportal/Report/'+ o.reportid + '/HitList/' + this.hitlist;
+          /*set common params*/
+          var params = {PageId: o.pageid, Preview: o.preview, Language:this.language, DbType:this.dbType};
+          /*if options are passed, add options*/
+          if(options && typeof options === 'object'){
+            for (var attrname in options) {
+              params[attrname] = typeof options[attrname]==='boolean'?(options[attrname]?'1':'0'):options[attrname];
+            }
+          }
+          if (document.querySelector('#PageStateId')) {
+            params.pageStateId=document.querySelector('#PageStateId').value;
+          }
+          if(!params.search && this._searchValues.length>0){params.search = JSON.stringify(this._searchValues);}
+          var sortingPagingValues = this.sortingPagingValues || {};
+
+          if (options && options.initialLoad === true && this.$$('#cardsPlaceholder')) {
+            this.$$('#cardsPlaceholder').innerHTML = '';
+          }
+          if (sortingPagingValues && sortingPagingValues.pagingValues && !isNaN(sortingPagingValues.pagingValues.pageNumber)) {
+            if (options && options.initialLoad === true) {
+              sortingPagingValues.pagingValues = null;
+            } else {
+              sortingPagingValues.pagingValues.pageNumber += sortingPagingValues.pagingValues.pagingForward ? 1 : -1;
+            }
+          }
+          params.sortingPagingValues=JSON.stringify(sortingPagingValues);
+          this.$.ajax.url = _basePath;
+          this.$.ajax.params = params;
+          this.$.ajax.method="GET";
+          this.$.ajax.generateRequest();
+        }
+      },
+      /**
+       * Parses HitList API response
+       * */
+      parseResponse:function(r){
+        r.sortingPagingValues.pagingValues.firstStartValue = this._fixJsonDate(r.sortingPagingValues.pagingValues.firstStartValue);
+        r.sortingPagingValues.pagingValues.lastStartValue = this._fixJsonDate(r.sortingPagingValues.pagingValues.lastStartValue);
+        this.sortingPagingValues=r.sortingPagingValues;
+        var sortBy = r.sortingPagingValues.sortingValues.sortBy;
+        for(var s in sortBy){
+          var column = this.columns.map(function(col){return col.name}).indexOf(s);
+          var direction = sortBy[s]===-1?'desc':'asc';
+          if(column>=0){this._sortOrder=this.previousSort=[{column:column,direction:direction}]};//store for comparing sorting in _sortChange
+        }
+        this.set('data.data', r.data);
+        this.set('data.sorting', this._sortOrder);
+        this.set('data.paging', r.sortingPagingValues.pagingValues);
+        this.set('data.disablePrevButton', r.sortingPagingValues.disablePrevButton);
+        this.set('data.disableNextButton', r.sortingPagingValues.disableNextButton);
+        this.set('data.length',r.sortingPagingValues.totalHits);
+        this.set('data.pageInfo', r.pageInfo);
+        this.async(function(){
+          if(this.tableView && this.$$('#grid')){
+            var grid = this.$$('#grid');
+            grid.items = r.data;
+            grid.size=r.data.length;
+            grid.refreshItems();
+            if(!this.visibleRows || (this.visibleRows && this.visibleRows>r.data.length)){grid.visibleRows=r.data.length} else if(this.visibleRows){grid.visibleRows=this.visibleRows;}
+            grid.then(function(){this.notifyResize()}.bind(this));
+          }
+          if(this.cardsView && this.$.cardsPlaceholder){
+            this.renderCards();
+          }
+
+        });
+
+      },
+      /**
+       * renders cards when in cards View
+       * */
+      renderCards:function(){
+        this.async(function(){
+          /*update template cards or whatever*/
+          if(this.$$('#cardsPlaceholder') && this.data && this.data.data){
+            var template = Polymer.dom(this.$.cards).getDistributedNodes()[0];
+            if(template){
+              this.$$('#cardsPlaceholder').innerHTML='';
+              this.templatize(template);
+              var hlData = JSON.parse(JSON.stringify(this.data.data));
+              hlData.forEach(function(item){
+                for(var key in item){
+                  var val = item[key];
+                  var title = this.columns.filter(function(col){return col.name===key});
+                  if(val && title && title.length>0){
+                    item[key] = {title: title[0].hidingToggleText, content: val}
+                  }
+                }
+                var clone = this.stamp({});
+                clone.card = item;
+                Polymer.dom(this.$$('#cardsPlaceholder')).appendChild(clone.root);
+              }.bind(this));
+              /*see if cards have tabs and select first*/
+              var cardTabs = this.$$('#cardsPlaceholder').querySelectorAll('paper-tabs');
+              if(cardTabs.length>0){
+                [].slice.call(cardTabs).forEach(function(item){item.selected=0});
+                var ironPages = this.$$('#cardsPlaceholder').querySelectorAll('iron-pages>*:first-child>template');
+                [].slice.call(ironPages).forEach(function(item){item.if=true});
+              }
+              this.updateStyles();
+              this.notifyResize()
+            }
+          }
+        })
+      },
+      /**
+       * @param {Boolean} pagingForward if `true` goes forward, if `null` goes backward
+       * @param {!Function} callback
+       * */
+      _skipPage: function(pagingForward, callback){
+        var spv = this.sortingPagingValues.pagingValues;
+        spv.pagingForward = pagingForward; /*if forward is needed then pass true, else null - backward*/
+        spv.startId = pagingForward ? spv.lastStartId : spv.firstStartId;
+        spv.startValue = pagingForward ? spv.lastStartValue : spv.firstStartValue;
+        this.requestResponse({isPaging: true}, callback);
+      },
+      /**
+       * requests sorting from the server if doesn't match previous sort
+       * @param {CustomEvent} event form clicked header
+       * */
+      _sortChange:function(event){
+        if(!this.previousSort || (this.previousSort && (this.previousSort.column !== Polymer.dom(event).event.detail.value[0].column || this.previousSort.direction !== Polymer.dom(event).event.detail.value[0].direction))){
+          //if (this.loading){return;}
+          this.sortingPagingValues.sortingValues.sortBy={};
+          this.sortingPagingValues.sortingValues.sortBy[this.columns[Polymer.dom(event).event.detail.value[0].column].name]=Polymer.dom(event).event.detail.value[0].direction==='asc'?1:-1;
+          this._clearPaging();
+          this.requestResponse({
+            isSorting: true,
+            initialLoad: true
+          });
+        }
+      },
+      /**
+       * clears `sortingPagingValues.pagingValues`
+       * */
+      _clearPaging: function() {
+        this.sortingPagingValues.pagingValues = null;
+      },
+      _fixJsonDate: function(jsonDate) {
+        if (!(jsonDate && Y.Lang.isFunction(jsonDate.replace))) {return jsonDate;}
+        var constructor = jsonDate.replace(new RegExp("^/Date\\(([-+]?\\d+)\\)/$"), "new Date($1)");
+        if (constructor == jsonDate) {return jsonDate;}
+        return eval(constructor);
+      }
+
+
+    });
+
+  })();
+</script>

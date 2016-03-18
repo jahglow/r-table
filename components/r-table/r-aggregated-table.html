@@ -1,0 +1,351 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../r-card/r-card-behavior.html">
+<link rel="import" href="../r-card/r-card.html">
+<link rel="import" href="../vaadin-grid/vaadin-grid.html">
+<link rel="import" href="./r-table-behavior.html">
+<link rel="import" href="./vaadin-grid-icons-fix.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../paper-tooltip/paper-tooltip.html">
+<link rel="import" href="../paper-input/paper-input.html">
+
+
+<!--
+An element to wrap around reportal WYSIWYG Aggregated Table component.
+It can:
+ ** accept unlimited levels of nested headers,
+  ** make columns: sortable, hidable/hidden, filterable;
+** limit the amount of records to be displayed;
+** allow row(s) selection;
+** autocreate row index column;
+** override column headers.
+
+It's based off [`vaadin-grid`](https://github.com/vaadin/vaadin-grid) element by Vaadin team ([Apache 2.0 license](https://github.com/vaadin/vaadin-grid/blob/master/LICENSE)).
+See `vaadin-grid` [API docs](https://cdn.vaadin.com/vaadin-core-elements/latest/vaadin-grid/index.html) and [Code Examples](https://cdn.vaadin.com/vaadin-elements/latest/vaadin-grid/demo/) to get a deeper insight into its functionality, if you want to modify or extend it.
+
+Example:
+
+    <r-aggregated-table>
+      <confirmit:wysiwygcomponent type="AggregatedTable" id="cdde7f88-9718-4694-a97c-161fe8fc4292" />
+    </r-aggregated-table>
+
+@group Reportal Elements
+@element r-aggregated-table
+@demo demo/r-aggregated-table.html
+-->
+<dom-module id="r-aggregated-table">
+  <template strip-whitespace>
+    <style include="vaadin-grid-icons-fix">
+      :host {
+        display: block;
+        width:100%;
+        height:auto;
+        position:relative;
+      }
+      :host::before{
+        content: 'r-aggregated-table';
+        display:none;
+        @apply(--r-aggregated-table-before);
+      }
+      :host ::content> table{display:none}
+      :host r-card {--r-card-content:{padding:0};}
+      #columnToggle .dropdown-content paper-icon-item{
+        --paper-item-min-height:32px;
+        cursor: pointer;
+        --paper-item-selected-weight:normal;
+        --paper-icon-item:{font-size:13px;}
+      }
+      #toolbox paper-menu-button{ padding: 8px 0; }
+      #toolbox paper-icon-button{margin: auto 0;}
+      #columnToggle .dropdown-content paper-icon-item ::content iron-icon{opacity: 0}
+      #columnToggle .dropdown-content paper-icon-item[selected] ::content iron-icon{opacity: 1}
+      :host vaadin-grid ::content thead>tr.vaadin-grid-row {height:36px !important}
+      :host vaadin-grid ::content thead>tr.vaadin-grid-row>th {height:36px !important}
+      :host vaadin-grid ::content .filterRow>th> paper-input {
+        --paper-input-container:{padding:0 !important};
+        --paper-input-container-input:{font-size:13px !important};
+        @apply(--layout-flex);
+      }
+      :host vaadin-grid ::content .filterRow>th> paper-input paper-input-container input {
+        font-size:13px !important;
+      }
+
+      :host vaadin-grid ::content .vaadin-grid-sidebar {display:none}
+    </style>
+
+    <content select="table" id="source"></content>
+    <r-card heading$="[[heading]]" id="card" toolbox assisted$="[[assisted]]">
+      <div class="card-content">
+        <vaadin-grid id="grid"></vaadin-grid>
+      </div>
+      <div id="toolbox">
+        <paper-tooltip for="searchButton">Toggle filter controls</paper-tooltip>
+        <paper-icon-button icon="search" id="searchButton" hidden$="[[!filterable]]" on-tap="toggleSearchRow"></paper-icon-button>
+
+        <paper-tooltip for="colTrigger" position="bottom" offset="0">Toggle columns visibility</paper-tooltip>
+        <paper-menu-button horizontal-align="right" vertical-offset="52" id="columnToggle" ignore-select>
+          <paper-icon-button icon="view-column" class="dropdown-trigger" id="colTrigger"></paper-icon-button>
+          <paper-listbox selected-attribute="selected" multi class="dropdown-content" attr-for-selected="value">
+            <template is="dom-repeat" items="[[_hidableColumns]]" as="column">
+              <paper-icon-item value$="[[column.colIndex]]"><iron-icon icon="check" item-icon></iron-icon>[[column.hidingToggleText]]</paper-icon-item>
+            </template>
+          </paper-listbox>
+        </paper-menu-button>
+      </div>
+    </r-card>
+  </template>
+</dom-module>
+
+<script>
+
+  (function(){
+    'use strict';
+
+    Polymer({
+      is: 'r-aggregated-table',
+      listeners:{
+        'tap':'_clickedCellCoordinates'
+        //'action-data-change':'voiceControl'
+//        'card.controls-ready':'_addControls'
+      },
+      behaviors: [
+        Confirmit.RTableBehavior,
+        Confirmit.RCardBehavior
+      ],
+      properties: {
+        _sortedColumn:{
+          type:Number,
+          value:null
+        },
+      },
+
+      _addControls:function(e) {
+        // this.addMenuSection(this.$.hidableColumns, this._hidableColumns, e.detail.container);
+      },
+
+      ready:function(){
+        //var grid = document.createElement('vaadin-grid');
+        var grid = this.grid = this.$.grid;
+        var table = Polymer.dom(this.$.source).getDistributedNodes()[0];
+
+        if(table){
+          this._defineData(table);
+          this._defineHeader(grid,table);
+          if(this.visibleRows){grid.visibleRows=this.visibleRows;}
+          if(this.selectionMode){grid.selection.mode=this.selectionMode;}
+          if(this.frozenColumns){
+            if(this.indexed){this.frozenColumns+=1;}
+            grid.frozenColumns=this.frozenColumns;
+          }
+          this.grid.addEventListener('sort-order-changed',function(e){return this._sortChange(e)}.bind(this));
+          grid.sortOrder=this._sortOrder;
+        }
+      },
+      _defineData:function(table){
+        var rows = [].slice.call(table.children).filter(function(item){return item.localName==='tbody'})[0].children;
+        this.grid.items=this.data=[].slice.call(rows).map(function(tr,index){
+          var t=[].slice.call(tr.children).map(function(td){
+            return td.children.length>0?td.innerHTML.trim():td.textContent.trim()
+          });
+          if(this.indexed){t.unshift(index+1)}
+          return t
+        }.bind(this));
+        // append conditional formatting from corresponding table cells
+        this.grid.cellClassGenerator = function(cell){
+          return rows[cell.row.index].children[cell.index].className;
+        };
+
+      },
+      /**
+       *
+       * @method _defineHeader
+       * @param {HTMLElement} host is reference to `vaadin-grid` element
+       * @param {HTMLTableElement} source is reference to the HTML table from `r-aggregated-table`'s light DOM
+       * `_defineHeader` scrapes header data off table's THEAD and appends `indexed` column if necessary
+       * */
+      _defineHeader:function(host,source){
+        //first define column quantity of the table
+        var columns = this._getImmediateChildrenByName(source,'tbody')[0].lastElementChild.children;
+        var columnsCount = columns?columns.length:0;
+
+        if(this.indexed){
+          host.addColumn({headerContent:this.indexedHeader, maxWidth:'100px', sortable:true}); //append index column
+        }
+        if(columnsCount>0){
+          for(var cc=0;cc<columnsCount;cc++){
+            host.addColumn(this.columns[cc]?this.columns[cc]:{});
+          }
+        }
+        var thead = this._getImmediateChildrenByName(source,'thead')[0];
+        if(thead){
+          var abstraction = this._headerAbstraction(thead);
+          var rowcount = thead.children.length;
+          for(var idx in abstraction){
+            if(idx>0){
+              host.header.addRow();
+            }
+            if(parseInt(idx)===(parseInt(rowcount)-1)){host.header.defaultRow = parseInt(rowcount)-1;}
+            this._fillHeaderRow(idx,parseInt(rowcount),abstraction[idx],host);
+          }
+          /* will add a row for filters*/
+          if(this.filterable){
+          }
+        }
+
+      },
+      /**
+       * Creates an object where each subproperty resembles a row in the header.
+       * It's used to decompose HTML `<thead>` with multiple rowspans and colspans into one-dimensonal rows
+       * */
+      _headerAbstraction:function(r){
+        var e,n,l,t,a,i,o,h,c,f,p,s,b,d,w={};
+        if(r&&r.children)for(e=0;e<r.children.length;e++)for(n=r.children[e],l=w[e]=w[e]||{},t=0,a=0;a<n.children.length;a++){if(i=n.children[a],o=i.colSpan,h=i.rowSpan,c=i.textContent,o||h||c){if(f=a,l.hasOwnProperty(a)){p=0,s=!1;for(b in l){if(parseInt(b)!==p){s=!0,f=p;break}p++}s||(f=p++)}for(b=e,h||(h=1),d=0;h>d;d++)h&&(b=e+d),w.hasOwnProperty(b)||(w[b]={}),w[b].hasOwnProperty(f)||(w[b][f]={},d===h-1?w[b][f].label=c.trim().length>0?c.trim():"":w[b][f].label=""),o>1&&(w[b][f].colspan=o);w[b]!==w[e]&&(l[f].label="")}else l[a].label="";t++}
+        return w
+      },
+      /*_headerAbstraction:function(thead){
+       var abstraction = {};
+       if(thead){
+       var rowcount = thead.children.length;
+       for(var a=0;a<rowcount;a++){
+       var realRow = thead.children[a]; //real row
+       var aRow = abstraction[a] = abstraction[a] || {}; //abstraction row (might exist)
+       var aRowLength = 0;
+       for(var rowTD = 0; rowTD<realRow.children.length;rowTD++){
+       var curTD = realRow.children[rowTD]; //current cell
+       var colspan = curTD.colSpan, rowspan = curTD.rowSpan,label = curTD.textContent;
+       if(colspan||rowspan||label){
+       var finalTDcellIndex=rowTD;
+       // if entry exists (there was a rowspan in previous row and it transferred label to next possible row), we need to find a new home for curTD
+       // all cells are filled sequentially, so we need to find a break in indexing sequence
+       if(aRow.hasOwnProperty(rowTD)) { //this entry exists (it can exist if was filled by previous row where a cell had a rowspan)
+       var realTDindex = 0, cellIsFound = false;
+       for (key in aRow) {
+       if (parseInt(key) === realTDindex) { realTDindex++ } else { cellIsFound = true; finalTDcellIndex = realTDindex; break;}
+       }
+       if(!cellIsFound){ //we've ran out of options with  realTDindex  cell, let's make it a realTDindex+1 ?
+       finalTDcellIndex = realTDindex++;
+       }
+       }
+       var key = a; //is this current row or it has rowspan and we append label to the bottommost row?
+       if(!rowspan){rowspan=1}
+       for(var ri=0;ri<rowspan;ri++){
+       if(rowspan){key=a+ri;}
+       if(!abstraction.hasOwnProperty(key)){abstraction[key]={}}// is there such a row in abstraction?
+       if(!abstraction[key].hasOwnProperty(finalTDcellIndex)){
+       abstraction[key][finalTDcellIndex]={};
+       if(ri===rowspan-1){ // if it's the last row
+       abstraction[key][finalTDcellIndex].label = label.trim().length>0?label.trim():''; // use label if more than empty else empty string
+       } else {abstraction[key][finalTDcellIndex].label = ''}
+       }
+       if(colspan>1){abstraction[key][finalTDcellIndex].colspan = colspan;}
+       }
+       if(abstraction[key]!==abstraction[a]){aRow[finalTDcellIndex].label = ''} // if there was rowspan, this cell is empty and needs empty label
+       } else {aRow[rowTD].label=''}
+       aRowLength++;
+       }
+       }
+       }
+       return abstraction;
+       },*/
+
+      /**
+       * Fills header row with necessary columns from the abstraction
+       * */
+      _fillHeaderRow:function(row,rowCount,data,host){
+        for(var cellIdx in data){
+          var trueCellIdx = !this.indexed?parseInt(cellIdx):parseInt(cellIdx)+1;
+          var cell = host.header.getCell(row,trueCellIdx);
+          var props = data[cellIdx];
+          if(props.colspan){cell.colspan = props.colspan}
+          if(row==(rowCount-1)){
+            if(this.indexed){ // apply index text content to header cell
+              host.header.getCell(row,0).content = host.columns[0].headerContent;
+            }
+            if(host.columns[trueCellIdx].headerContent && host.columns[trueCellIdx].headerContent.length>0 && this.columnHeaderOverride){ //if we need to override and we have text to override with
+              cell.content = host.columns[trueCellIdx].headerContent;
+              if(!host.columns[trueCellIdx].hidingToggleText){host.columns[trueCellIdx].hidingToggleText = host.columns[trueCellIdx].headerContent;}
+            } else {
+              cell.content = props.label;
+              if(!host.columns[trueCellIdx].hidingToggleText){host.columns[trueCellIdx].hidingToggleText = props.label;}
+            }
+            if(host.columns[trueCellIdx].clickable){
+              cell.content += this._addHeaderButton(host.columns[trueCellIdx]);
+            }
+
+          } else {
+            cell.content=props.label;
+          }
+        }
+      },
+      _addHeaderButton:function(column){
+        return '<span style="padding-left:5px;cursor:pointer"><iron-icon icon="'+(column.clickableIcon? column.clickableIcon :'open-in-browser')+'" onclick="'+column.clickableFunction+'"></iron-icon>'+ (column.clickableTooltip?'<paper-tooltip>'+column.clickableTooltip+'</paper-tooltip>':'')+'</span>'
+      },
+      /**
+       * Triggered on-sort-order-changed. Checks if the table had been sorted by this column.
+       * If so, reverses the sorting, else does the sorting from `_sorter`
+       * */
+      _sortChange:function(){
+        var grid = this.$.grid;
+        if(grid.sortOrder.length===1 && this._sortedColumn === grid.sortOrder[0].column){
+          grid.items.reverse(); /*if this column was sorted before just flip it*/
+        } else { //not sorted
+          grid.items.sort(function(a,b){
+            if(grid.sortOrder.length>1){
+              return this._sorter(a,b,grid.sortOrder[0].column, grid.sortOrder[0].direction === 'asc' ? 1 : -1) || this._sorter(a,b,grid.sortOrder[1].column, grid.sortOrder[1].direction === 'asc' ? 1 : -1)
+            } else {
+              return this._sorter(a,b,grid.sortOrder[0].column, grid.sortOrder[0].direction === 'asc' ? 1 : -1)
+            }
+          }.bind(this));
+        }
+        this._sortedColumn = grid.sortOrder.length===1? grid.sortOrder[0].column : null;
+      },
+      /** Applies sorting to one column so far */
+      _sorter:function(a,b,idx,lesser){
+        var x,y;
+        x = a[idx]; y = b[idx];
+        var regex = /[<>]/g;
+        if(regex.test(x) || regex.test(y)){ // if we need to sort elements that have HTML like links
+          var tempEl1 = document.createElement('span'); tempEl1.innerHTML = x;
+          x=tempEl1.textContent.trim();
+          var tempEl2 = document.createElement('span'); tempEl2.innerHTML = y;
+          y=tempEl2.textContent.trim();
+        }
+        if(!isNaN(parseFloat(x)) && !isNaN(parseFloat(y))){
+          return parseFloat(x) <  parseFloat(y) ? lesser :  parseFloat(x) >  parseFloat(y) ? -lesser : 0;
+        } else {
+          return x.toLowerCase() < y.toLowerCase() ? lesser : x.toLowerCase() > y.toLowerCase() ? -lesser : 0;
+        }
+      },
+      /**
+       * Filters data based on column-filters in a filter row. Filtering takes place on a per-column basis whenever one of the filtering inputs changes its value.
+       * Filtering is based on _visible_ columns only, i.e. if the filter contained value and the column was filtered against it, and then the column was hidden, this filter will be disregarded until the column becomes visible again.
+       * */
+      filterData:function(){
+        /** if one filter is cleared, there might be other filters that contain data. If so, we need to filter against those*/
+        this.debounce('columnFilter',function(){
+          var filterable = this.columns.filter(function(col){return col.filterable && !col.hidden}).map(function(col){return this.indexed?col.colIndex +1 :col.colIndex}.bind(this));
+                  this.grid.items = this.data;
+                  filterable.forEach(function(col){
+                    var cell = this.grid.header.getCell(this.grid.header.rowCount -1, col);
+                    if(cell.content.value.length>0){
+                      this.grid.items = this.grid.items.filter(function(item){ return (item[col].toString().toLowerCase()).indexOf(cell.content.value) != -1});
+                    }
+                    //this.$.grid.size = this.$.grid.items.length;
+                  }.bind(this));
+                }.bind(this), 300
+        )
+      }
+
+    });
+  })();
+
+</script>

@@ -1,0 +1,6 @@
+bower_components/
+.idea
+/temp
+/.yo-rc.json
+/.travis.yml
+

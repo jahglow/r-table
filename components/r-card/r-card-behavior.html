@@ -1,0 +1,186 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../polymer/polymer.html">
+
+<script>
+
+  var Confirmit=Confirmit||{};
+  /** @polymerBehavior Confirmit.RCardBehavior */
+  Confirmit.RCardBehavior = {
+
+    properties: {
+      /**
+       * The title of the card.
+       */
+      heading: {
+        type: String,
+        value: '',
+        observer: '_headingChanged'
+      },
+
+      /**
+       * The url of the title image of the card.
+       */
+      image: {
+        type: String,
+        value: ''
+      },
+
+      /**
+       * When `true`, any change to the image url property will cause the
+       * `placeholder` image to be shown until the image is fully rendered.
+       */
+      preloadImage: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * When `preloadImage` is true, setting `fadeImage` to true will cause the
+       * image to fade into place.
+       */
+      fadeImage: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * The z-depth of the card, from 0-5.
+       */
+      elevation: {
+        type: Number,
+        value: 1,
+        reflectToAttribute: true
+      },
+
+      /**
+       * Set this to true to animate the card shadow when setting a new
+       * `z` value.
+       */
+      animatedShadow: {
+        type: Boolean,
+        value: false
+      },
+
+      /**
+       * Read-only property used to pass down the `animatedShadow` value to
+       * the underlying paper-material style (since they have different names).
+       */
+      animated: {
+        type: Boolean,
+        reflectToAttribute: true,
+        readOnly: true,
+        computed: '_computeAnimated(animatedShadow)'
+      },
+      /**
+       * Sets a sizing option for the image.  Valid values are `contain` (full
+       * aspect ratio of the image is contained within the element and
+       * letterboxed) or `cover` (image is cropped in order to fully cover the
+       * bounds of the element), or `null` (default: image takes natural size).
+       */
+      imageSizing: {
+        type: String,
+        value: null
+      },
+      /**
+       * Sets an aspect ratio for the image in the header,
+       * if you want to restrict it to a certain one according to material spec.
+       * Valid values are `16:9` and `1:1`.
+       * If you specify `imageAspectRatio`, make sure that `imageSizing` is set to `cover`
+       */
+      imageAspectRatio:String,
+      /**
+       * Sets a scrim opacity under header text as a gradient underlay to make the text readable against the background image.
+       * Provide a number ranging from 0-6, where 0 is no scrim at all (default) and 6 is 60% opaque scrim.
+       * Material guidelines are under [Text Protection](https://www.google.com/design/spec/style/imagery.html#imagery-ui-integration)
+       */
+      scrim:{
+        type:Number,
+        value:0
+      },
+      /**
+       * The icon on the left of the tile.
+       */
+      icon: {
+        type: String,
+        value: ''
+      },
+      /** Set to `true` if the `r-card` has menu/controls */
+      controls:{
+        type:Boolean,
+        value:false
+      },
+      /** Set to `true` if the `r-card` needs an expanding toolbox section for different toggles*/
+      toolbox:{
+        type:Boolean,
+        value:false
+      }
+
+    },
+    observers:['_computeAspectRatio(imageAspectRatio,imageSizing,image)'],
+
+    _headingChanged: function(heading) {
+      var label = this.getAttribute('aria-label');
+      this.setAttribute('aria-label', heading);
+    },
+
+    _computeHeadingClass: function(image) {
+      var cls = 'title-wrapper';
+      if (image) cls += ' over-image';
+      return cls;
+    },
+
+    _computeAnimated: function(animatedShadow) {
+      return animatedShadow;
+    },
+
+    _computeAspectRatio:function(ratio,imageSizing,image){
+      if(image.length>0 && this.$.headerImage)this.$.headerImage.style.paddingTop = (ratio === '16:9'?'56.5%':'100%');
+    },
+
+    /**
+     * Computes scrim opacity.
+     * @param {Number} scrim 0-6 that results in 0%-60% opacity of scrim layer
+     * @return {style.opacity}
+     */
+    _computeScrim:function(scrim){
+      return scrim>0 ? 'opacity:0.' + scrim : 'opacity:0';
+    },
+
+    /**
+     * @module addMenuSection Adds a section of menu to the card header.
+     * @param {HTMLTemplateElement} template is a `template` of a menu section
+     * @param {Array} data is an Array of Objects passed to the bindings within `template`.
+     * Must contain `action` property in each data-item that is a string name of the function defined in the caller element.
+     * When a menu item is selected, the function will be called.
+     * Styling paper-listbox children must be done from the element that pushes them to `r-card`
+     * @param {HTMLElement} container is reference to the menu insertion point, must be passed.
+     * @param {Object} params are parameters necessary to be set on parent `paper-listbox`
+     */
+    addMenuSection:function(template, data, container, params){
+      this.templatize(template);
+      var clone=this.stamp({});
+      clone.data = data;
+      var listBox=Polymer.dom(clone.root).querySelector('paper-listbox');
+      // if there are any params passed to listbox, iterate over them.
+      if(params){for(var param in params){listBox[param] = params[param]}}
+      /*list-box in template on-select will trigger the function defined in the calling element and passed as `action` attribute to list-box item */
+      listBox.addEventListener('iron-select',function(el){if(el.detail.item.action)this[el.detail.item.action]();}.bind(this));
+      if(Polymer.dom(container).children.length>0){
+        Polymer.dom(container).appendChild(document.createElement('hr')) ;
+      }
+      Polymer.dom(container).appendChild(clone.root);
+      //this.updateStyles();
+    }
+
+
+  };
+</script>

@@ -1,0 +1,266 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-image/iron-image.html">
+<link rel="import" href="../paper-material/paper-material.html">
+<link rel="import" href="../paper-styles/default-theme.html">
+<link rel="import" href="../paper-menu-button/paper-menu-button.html">
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../paper-listbox/paper-listbox.html">
+<link rel="import" href="../paper-item/paper-icon-item.html">
+<link rel="import" href="../paper-tooltip/paper-tooltip.html">
+<link rel="import" href="../iron-collapse/iron-collapse.html">
+<link rel="import" href="./r-card-behavior.html">
+
+
+
+
+<!--
+Material design: [Cards](https://www.google.com/design/spec/components/cards.html)
+
+`r-card` is a container with a drop shadow.
+
+Example:
+
+    <r-card heading="Card Title">
+      <div class="card-content">Some content</div>
+      <div class="card-actions">
+        <paper-button>Some action</paper-button>
+      </div>
+    </r-card>
+
+Example - top card image:
+
+    <r-card heading="Card Title" image="/path/to/image.png">
+      ...
+    </r-card>
+
+### Accessibility
+
+By default, the `aria-label` will be set to the value of the `heading` attribute.
+
+### Styling
+
+The following custom properties and mixins are available for styling:
+
+Custom property | Description | Default
+----------------|-------------|----------
+`--r-card-background-color` | The background color of the card | `--primary-background-color`
+`--r-card-header-color` | The color of the header text | `#000`
+`--r-card-header` | Mixin applied to the card header section | `{}`
+`--r-card-header-text` | Mixin applied to the title in the card header section | `{}`
+`--r-card-header-image` | Mixin applied to the image in the card header section | `{}`
+`--r-card-header-over-image` | Mixin applied to the title overlapping the image in the card header section | `{}`
+`--r-card-content` | Mixin applied to the card content section| `{}`
+`--r-card-actions` | Mixin applied to the card action section | `{}`
+`--r-card` | Mixin applied to the card | `{}`
+
+@group Reportal Elements
+@element r-card
+@demo demo/index.html
+-->
+
+<dom-module id="r-card">
+  <template>
+    <style include="paper-material">
+      :host {
+        display: inline-block;
+        position: relative;
+        box-sizing: border-box;
+        background-color: var(--r-card-background-color, --primary-background-color);
+        border-radius: 2px;
+
+        @apply(--paper-font-common-base);
+        @apply(--layout-vertical);
+        @apply(--r-card);
+      }
+      :host::before{
+        content: 'r-card';
+        display:none;
+        @apply(--r-card-before);
+      }
+
+      /* IE 10 support for HTML5 hidden attr */
+      [hidden] {
+        display: none !important;
+      }
+
+      .header {
+        position: relative;
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+        overflow: hidden;
+        margin-bottom:-4px;
+
+        @apply(--r-card-header);
+      }
+
+      .header iron-image {
+        width: 100%;
+        --iron-image-width: 100%;
+        pointer-events: none;
+
+        @apply(--r-card-header-image);
+      }
+
+      .header>.title-wrapper{
+        @apply(--layout-horizontal);
+      }
+      .header .title-text, .header .iron-icon, .header .r-speech-input-button {
+        margin:16px;
+        color: var(--r-card-header-color, #000);
+      }
+      .header .controls-container{
+        margin:auto;
+        position:relative;
+        width:52px;
+        height:52px;
+        position:relative;
+        @apply(--layout-end);
+      }
+      .header #menuButton {
+        position:absolute;
+        --paper-icon-button-ink-color: var(--r-card-header-color, #000);
+      }
+      .header .title-text {
+        font-size: 24px;
+        margin: 0 16px;
+        line-height:52px;
+        font-weight: 400;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        @apply(--layout-flex);
+        @apply(--r-card-header-text);
+      }
+      .header .title-wrapper.over-image {
+        position: absolute;
+        bottom: 3px;
+        right:0;
+        left:0;
+      }
+      .header .over-image .title-text, .header #toolboxToggle{
+        @apply(--r-card-header-over-image);
+      }
+      .header [scrim]{
+        position:absolute;
+        right:0px;
+        left:0px;
+        bottom:4px;
+        top:50%;
+        background:linear-gradient(to top, rgba(0,0,0,1) 0%,rgba(0,0,0,0.5) 30%,rgba(0,0,0,0) 100%);
+        opacity:0;
+
+        @apply(--r-card-header-image-scrim);
+      }
+      :host ::content .card-content {
+        padding: 16px;
+        position:relative;
+
+        @apply(--layout-self-stretch);
+        @apply(--layout-flex);
+        @apply(--r-card-content);
+      }
+
+      :host ::content .card-actions {
+        border-top: 1px solid #e8e8e8;
+        padding: 5px 16px;
+        position:relative;
+
+        @apply(--r-card-actions);
+      }
+      :host .controls-container paper-menu-button{
+        padding:6px;
+      }
+      :host .controls-container .dropdown-content {
+        line-height:24px;
+        color: var(--default-primary-color, rgba(0,0,0,0.54));
+      }
+      :host .controls-container hr{
+        border:0;
+        border-top: 1px solid rgba(0,0,0,0.12);
+        margin:0;
+      }
+      :host #toolboxContainer ::content #toolbox {
+        @apply(--layout-horizontal);
+        @apply(--layout-end-justified);
+        box-shadow: #ccc 0 0 8px inset;
+        background-color: rgba(249,249,249,0.04);
+
+        @apply(--r-card-toolbox);
+      }
+      :host #toolboxToggle {
+        margin: auto 0;
+        opacity:0.8;
+      }
+
+    </style>
+
+    <div class="header">
+      <iron-image hidden$="[[!image]]" src="[[image]]" preload$="[[preloadImage]]" fade$="[[fadeImage]]" sizing$="[[imageSizing]]" id="headerImage"></iron-image>
+      <div scrim style$="[[_computeScrim(scrim)]]"></div>
+      <div class$="[[_computeHeadingClass(image)]]" hidden$="[[!heading]]">
+        <iron-icon hidden$="[[!icon]]" icon="[[icon]]"></iron-icon>
+        <div class="title-text" >[[heading]]</div>
+        <paper-tooltip for="toolboxToggle" position="left">Toggle Toolbox drawer</paper-tooltip>
+        <paper-icon-button icon="settings-applications" on-tap="_toggleToolbox" hidden$="[[!toolbox]]" id="toolboxToggle"></paper-icon-button>
+        <template is="dom-if" if="[[controls]]" id="controls">
+          <div class="controls-container">
+            <paper-menu-button horizontal-align="right" vertical-offset="52" id="menuButton">
+              <paper-icon-button icon="more-vert" class="dropdown-trigger"></paper-icon-button>
+              <paper-material class="dropdown-content"></paper-material>
+            </paper-menu-button>
+          </div>
+        </template>
+      </div>
+    </div>
+    <iron-collapse id="toolboxContainer" style="width:100%;" hidden$="[[!toolbox]]">
+      <content select="#toolbox"></content>
+      <template is="dom-if" if="{{speechEnabled}}">
+        <r-speech-input-button hidden$="[[!assisted]]" context$={{context}} action-data="{{actionData}}"></r-speech-input-button>
+      </template>
+    </iron-collapse>
+    <content select="template.menu" id="menuTemplates"></content>
+    <content></content>
+  </template>
+
+  <script>
+    Polymer({
+      is: 'r-card',
+      behaviors:[Confirmit.RCardBehavior],
+      listeners: {'controls.dom-change':'_controlsReady'},
+      /**
+       * Fires a  `controls-ready` {CustomEvent} when `template#controls` is stamped
+       */
+      _controlsReady:function(){
+        if(this.$$('.controls-container .dropdown-content')){
+          this.fire('controls-ready',{container:this.$$('.controls-container .dropdown-content')})
+        }
+      },
+      _toggleToolbox:function(e){
+        console.log(e);
+        var toolbox = Polymer.dom(e).path.filter(function(el){return el.localName=='r-card'})[0].querySelector('#toolboxContainer');
+        //var iconButton = Polymer.dom(event).localTarget;
+        //iconButton.icon = moreInfo.opened ? 'hardware:keyboard-arrow-up' : 'hardware:keyboard-arrow-down';
+        toolbox.toggle();
+      }
+
+      /**
+       * Fired after the `controls-container` is ready to receive controls for the card.
+       * Event has `detail.container` which is a reference to the menu insertion point (container).
+       * @event controls-ready
+       */
+
+    });
+  </script>
+</dom-module>
