@@ -16,9 +16,20 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
   <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
   <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+  <link rel="import" href="../../radial-gauge/radial-gauge.html">
+  <link rel="import" href="../../paper-tabs/paper-tabs.html">
+  <link rel="import" href="../../paper-tabs/paper-tab.html">
+  <link rel="import" href="../../iron-flex-layout/classes/iron-flex-layout.html">
 
   <link rel="import" href="../r-hitlist.html">
   <style is="custom-style" include="demo-pages-shared-styles">
+    :root{
+      --radial-gauge-width: 120px;
+      --radial-gauge-rail-width:5px;
+      --radial-gauge-secondary-rail-width:5px;
+      --radial-gauge-secondary-offset: 2px;
+      --radial-gauge-info-edge-offset: 5px;
+    }
     demo-snippet {
       --demo-snippet-demo: {
         background: var(--paper-grey-200);
@@ -32,7 +43,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       border-radius:inherit;
       outline: 3px dashed #0b97c4;
     }
-    *:hover::before,* ::content *:hover::before{
+    r-hitlist:hover::before,r-hitlist ::content r-card:hover::before{
       position:absolute;
       font-size: 10px;
       padding:5px;
@@ -64,79 +75,81 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
                  assisted>
         <template class="cards">
           <r-card class="flex detailsPaper" calculate-height="" heading="{{card.ContactFullName.content}}" style="min-width:320px">
-            <div id="content">
-              <div class="layout vertical self-stretch flex-12">
+            <div class="card-content">
+              <div class="flex self-stretch">
                 <paper-tabs selected="{{hlCsel}}">
                   <paper-tab>{{card.NPS.title}}</paper-tab>
                   <paper-tab>{{card.NES.title}}</paper-tab>
                 </paper-tabs>
                 <iron-pages selected="{{hlCsel}}" class="flex">
                   <div class="layout vertical flex">
-                    <template is="dom-if"><radial-gauge min="0" max="10" value$="{{card.NPS.content}}" class="flex"></radial-gauge>
+                    <template is="dom-if">
+                      <radial-gauge min="0" max="10" value$="{{card.NPS.content}}" class="flex" color="this.value>8?'green':(this.value<7?'red':'amber')"></radial-gauge>
                       <div style="padding: 8px 16px">{{card.NESWhy.content}}</div></template>
                   </div>
                   <div class="layout vertical flex">
-                    <template is="dom-if" if="{{hlCsel}}"><radial-gauge min="0" max="10" value$="{{card.NES.content}}" class="flex"></radial-gauge>
+                    <template is="dom-if" if="{{hlCsel}}">
+                      <radial-gauge min="0" max="10" value$="{{card.NES.content}}" class="flex" color="this.value>8?'green':(this.value<7?'red':'amber')"></radial-gauge>
                       <div style="padding: 8px 16px">{{card.NPSWhy.content}}</div></template>
                   </div>
                 </iron-pages>
-                <div id="actions">
-                  <div class="layout end-justified">
-                    <paper-icon-item><iron-icon icon="mail" item-icon=""></iron-icon>{{card.email.content}}</paper-icon-item>
-                    <paper-icon-item><iron-icon icon="settings-phone" item-icon=""></iron-icon>{{card.Telephone1.content}}</paper-icon-item>
-                  </div>
-                </div>
               </div>
             </div>
+            <div class="card-actions">
+              <div class="layout end-justified">
+                <paper-icon-item><iron-icon icon="mail" item-icon=""></iron-icon>{{card.email.content}}</paper-icon-item>
+                <paper-icon-item><iron-icon icon="settings-phone" item-icon=""></iron-icon>{{card.Telephone1.content}}</paper-icon-item>
+              </div>
+            </div>
+
           </r-card>
         </template>
       </r-hitlist>
       <script>
         HTMLImports.whenReady(function(){
           var hitlist = document.querySelector('r-hitlist');
-          console.log(hitlist);
-        /*pass dummy data fro hitlist demo*/
-        var data = JSON.stringify({
-          "sortingPagingValues":{
-            "sortingValues":{
-              "sortBy":{"responseid":-1}
+          /*pass dummy data fro hitlist demo*/
+          var data = JSON.stringify({
+            "sortingPagingValues":{
+              "sortingValues":{
+                "sortBy":{"responseid":-1}
+              },
+              "pagingValues":{
+                "pagingForward":true,
+                "pageNumber":0,
+                "firstStartValue":null,
+                "firstStartId":"40196",
+                "lastStartValue":null,
+                "lastStartId":"40169",
+                "startId":null,
+                "startValue":null
+              },
+              "totalHits":24181,
+              "disablePrevButton":true,
+              "disableNextButton":false
             },
-            "pagingValues":{
-              "pagingForward":true,
-              "pageNumber":0,
-              "firstStartValue":null,
-              "firstStartId":"40196",
-              "lastStartValue":null,
-              "lastStartId":"40169",
-              "startId":null,
-              "startValue":null
-            },
-            "totalHits":24181,
-            "disablePrevButton":true,
-            "disableNextButton":false
-          },
-          "data":[
-            {"responseid":"40196","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. XXX XXXXX","email":"XXXXXXXX@AOL.COM","Telephone1":"+XXXXXXXXXXXXXX","NPS":"7","NES":"8","NPSWhy":"I had to follow up on my order as it did not appear on Parcelforce tracker. *company* customer services were extremely helpful and my order suddenly appeared on the tracker as received at delivery depot It seems that Parcelforce initially lost track of and then found the parcel a day later ","NESWhy":"As long as this was an isolated issue with Parcelforce there is no need for change.  Might be worth tracking Parcelforce service for a while to see how frequently deliveries go astray"},
-            {"responseid":"40195","interview_end":"2015-06-10 00:00:00","ContactFullName":"SIG.RA ****** ******","email":"XXXXX.XXXXXXXXX@A****L.IT","Telephone1":"+3********4","NPS":"5","NES":"5","NPSWhy":"poco efficienti nel dare risposte ","NESWhy":"-"},
-            {"responseid":"40194","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. G**Y E*******D","email":"GARY@H****O.CO.UK","Telephone1":"+4********3","NPS":"10","NES":"9","NPSWhy":"excellent value for money and very prompt delivery","NESWhy":"just keep on providing the good service"},
-            {"responseid":"40192","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. S******T D*****O","email":"Z******T@G****L.COM","Telephone1":"+6*******4","NPS":"0","NES":"0","NPSWhy":"??????????????????????????????????????????????????? ????????????????? ????????????????????????? ????????????????????","NESWhy":"?????????????????? ???????????????????????????????????????? ???????????????????? ????????????????? ??????????????????????????? ????????????????????????????????????????? ???????????????????"},
-            {"responseid":"40188","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. **** P******S","email":"R***.G.P******S@B*****T.COM","Telephone1":"+4*********2","NPS":"10","NES":"10","NPSWhy":"Items arrived next day and as ordered ","NESWhy":"No,all worked out fine "},
-            {"responseid":"40187","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. F***D H*****T","email":"H*****42@YAHOO.COM.AU","Telephone1":"+6********2","NPS":"7","NES":"10","NPSWhy":"You pay for good service.","NESWhy":"-"},
-            {"responseid":"40186","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. M****K L****E","email":"S****S@Z*****G.CO.UK","Telephone1":"+4*********0","NPS":"10","NES":"10","NPSWhy":"Easy to order. Goods delivered quicky and no problems.","NESWhy":"No - all good."},
-            {"responseid":"40184","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. D*****D C*****Y","email":"D***D.C*******Y@B*****O.CO.UK","Telephone1":"+4**********1","NPS":"10","NES":"10","NPSWhy":"Excellent stock, easy to use website, great service. ","NESWhy":"As a wholesaler we look to sell on products we buy from yourself, so slightly more competitive prices would be good."},
-            {"responseid":"40183","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. C*****O R****S A****O","email":"G***L.T****Z@G***L.COM","Telephone1":"+3**********5","NPS":"9","NES":"10","NPSWhy":"SATISFEITO COM O VOSSO SERVIÇO E RAPIDEZ","NESWhy":"-"},
-            {"responseid":"40182","interview_end":"2015-06-10 00:00:00","ContactFullName":"M G. N*****T","email":"G****Y.N******T@S****S.BE","Telephone1":"+3*********5","NPS":"8","NES":"7","NPSWhy":"Parce que le choix sur le site est grand et les délais de livraison rapides.","NESWhy":"Il n\u0027est pas toujours évident de trouver un objet technique en anglais."},
-            {"responseid":"40181","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. W*****E H******N","email":"W*****E@P*******Y.CO.UK","Telephone1":"+4**********3","NPS":"10","NES":"10","NPSWhy":"very helpful, my complaint was dealt with quickly and efficiently. ","NESWhy":"-"},
-            {"responseid":"40180","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. M*****N M*******R","email":"M*******S@H**********L.COM","Telephone1":"-","NPS":"9","NES":"9","NPSWhy":"In stock, reasonable price","NESWhy":"-"},
-            {"responseid":"40179","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mrs. S*****A K*****N","email":"W*********D@V**********A.COM","Telephone1":"+4*********1","NPS":"7","NES":"10","NPSWhy":"If the prices were more competitive then I would refer colleagues for sure.","NESWhy":"n/a"},
-            {"responseid":"40178","interview_end":"2015-06-10 00:00:00","ContactFullName":"SIG E******E F******E","email":"F*********E@G*********L.COM","Telephone1":"+3**********8","NPS":"10","NES":"10","NPSWhy":"E\u0027 fornita di tutto","NESWhy":"al momento no"},
-            {"responseid":"40175","interview_end":"2015-06-10 00:00:00","ContactFullName":"Herr H******T P*****S","email":"H.P*****S@H******E.DE","Telephone1":"-","NPS":"10","NES":"10","NPSWhy":"schnelle Lieferung","NESWhy":"-"},
-            {"responseid":"40174","interview_end":"2015-06-10 00:00:00","ContactFullName":"Herr A*****N R*****S","email":"A******N.R******@V*****K.AT","Telephone1":"+4*********0","NPS":"3","NES":"2","NPSWhy":"Der Katalog ist zu umfangreich. Die Suche ist teilweise kaum mehr möglich. Die Beschreibung der Produkte nicht aussagekräftig. Die Suchparameter teilweise falsch gewählt. ","NESWhy":"-"},
-            {"responseid":"40173","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. J****E L***S S*****S","email":"J*******S@P*******A.ES","Telephone1":"+3**********5","NPS":"5","NES":"3","NPSWhy":"falta de información estado de pedido, falta de claridad situación de pago etc...     ","NESWhy":"primero no hay acceso al pedido, después información muy limitada, la única información  aceptable la telefónica y mediante un 902."},
-            {"responseid":"40172","interview_end":"2015-06-10 00:00:00","ContactFullName":"SIG P*****O T*****I","email":"******@M***********A.IT","Telephone1":"+3**********7","NPS":"8","NES":"8","NPSWhy":"Qualita dei prodotti, ampiezza della gamma e velocita di spedizione","NESWhy":"-"},
-            {"responseid":"40170","interview_end":"2015-06-10 00:00:00","ContactFullName":"M J. H*****N","email":"J********N@L********T.FR","Telephone1":"+3*********0","NPS":"10","NES":"10","NPSWhy":"richesse des références simplicité pour les trouver et aide efficace au cas ou","NESWhy":"-"},
-            {"responseid":"40169","interview_end":"2015-06-10 00:00:00","ContactFullName":"Ms. R*****T G*****R","email":"A*********V_10@Y****O.COM","Telephone1":"+6********2","NPS":"7","NES":"10","NPSWhy":"most likely I recommend *company* to my friend but not for my respective clients.","NESWhy":"-"}],
-          "pageInfo":"1-20"});
+            "data":[
+              {"responseid":"40196","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. XXX XXXXX","email":"XXXXXXXX@AOL.COM","Telephone1":"+XXXXXXXXXXXXXX","NPS":"7","NES":"8","NPSWhy":"I had to follow up on my order as it did not appear on Parcelforce tracker. *company* customer services were extremely helpful and my order suddenly appeared on the tracker as received at delivery depot It seems that Parcelforce initially lost track of and then found the parcel a day later ","NESWhy":"As long as this was an isolated issue with Parcelforce there is no need for change.  Might be worth tracking Parcelforce service for a while to see how frequently deliveries go astray"},
+              {"responseid":"40195","interview_end":"2015-06-10 00:00:00","ContactFullName":"SIG.RA ****** ******","email":"XXXXX.XXXXXXXXX@A****L.IT","Telephone1":"+3********4","NPS":"5","NES":"5","NPSWhy":"poco efficienti nel dare risposte ","NESWhy":"-"},
+              {"responseid":"40194","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. G**Y E*******D","email":"GARY@H****O.CO.UK","Telephone1":"+4********3","NPS":"10","NES":"9","NPSWhy":"excellent value for money and very prompt delivery","NESWhy":"just keep on providing the good service"},
+              {"responseid":"40192","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. S******T D*****O","email":"Z******T@G****L.COM","Telephone1":"+6*******4","NPS":"0","NES":"0","NPSWhy":"??????????????????????????????????????????????????? ????????????????? ????????????????????????? ????????????????????","NESWhy":"?????????????????? ???????????????????????????????????????? ???????????????????? ????????????????? ??????????????????????????? ????????????????????????????????????????? ???????????????????"},
+              {"responseid":"40188","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. **** P******S","email":"R***.G.P******S@B*****T.COM","Telephone1":"+4*********2","NPS":"10","NES":"10","NPSWhy":"Items arrived next day and as ordered ","NESWhy":"No,all worked out fine "},
+              {"responseid":"40187","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. F***D H*****T","email":"H*****42@YAHOO.COM.AU","Telephone1":"+6********2","NPS":"7","NES":"10","NPSWhy":"You pay for good service.","NESWhy":"-"},
+              {"responseid":"40186","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. M****K L****E","email":"S****S@Z*****G.CO.UK","Telephone1":"+4*********0","NPS":"10","NES":"10","NPSWhy":"Easy to order. Goods delivered quicky and no problems.","NESWhy":"No - all good."},
+              {"responseid":"40184","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. D*****D C*****Y","email":"D***D.C*******Y@B*****O.CO.UK","Telephone1":"+4**********1","NPS":"10","NES":"10","NPSWhy":"Excellent stock, easy to use website, great service. ","NESWhy":"As a wholesaler we look to sell on products we buy from yourself, so slightly more competitive prices would be good."},
+              {"responseid":"40183","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. C*****O R****S A****O","email":"G***L.T****Z@G***L.COM","Telephone1":"+3**********5","NPS":"9","NES":"10","NPSWhy":"SATISFEITO COM O VOSSO SERVIÇO E RAPIDEZ","NESWhy":"-"},
+              {"responseid":"40182","interview_end":"2015-06-10 00:00:00","ContactFullName":"M G. N*****T","email":"G****Y.N******T@S****S.BE","Telephone1":"+3*********5","NPS":"8","NES":"7","NPSWhy":"Parce que le choix sur le site est grand et les délais de livraison rapides.","NESWhy":"Il n\u0027est pas toujours évident de trouver un objet technique en anglais."},
+              {"responseid":"40181","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. W*****E H******N","email":"W*****E@P*******Y.CO.UK","Telephone1":"+4**********3","NPS":"10","NES":"10","NPSWhy":"very helpful, my complaint was dealt with quickly and efficiently. ","NESWhy":"-"},
+              {"responseid":"40180","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. M*****N M*******R","email":"M*******S@H**********L.COM","Telephone1":"-","NPS":"9","NES":"9","NPSWhy":"In stock, reasonable price","NESWhy":"-"},
+              {"responseid":"40179","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mrs. S*****A K*****N","email":"W*********D@V**********A.COM","Telephone1":"+4*********1","NPS":"7","NES":"10","NPSWhy":"If the prices were more competitive then I would refer colleagues for sure.","NESWhy":"n/a"},
+              {"responseid":"40178","interview_end":"2015-06-10 00:00:00","ContactFullName":"SIG E******E F******E","email":"F*********E@G*********L.COM","Telephone1":"+3**********8","NPS":"10","NES":"10","NPSWhy":"E\u0027 fornita di tutto","NESWhy":"al momento no"},
+              {"responseid":"40175","interview_end":"2015-06-10 00:00:00","ContactFullName":"Herr H******T P*****S","email":"H.P*****S@H******E.DE","Telephone1":"-","NPS":"10","NES":"10","NPSWhy":"schnelle Lieferung","NESWhy":"-"},
+              {"responseid":"40174","interview_end":"2015-06-10 00:00:00","ContactFullName":"Herr A*****N R*****S","email":"A******N.R******@V*****K.AT","Telephone1":"+4*********0","NPS":"3","NES":"2","NPSWhy":"Der Katalog ist zu umfangreich. Die Suche ist teilweise kaum mehr möglich. Die Beschreibung der Produkte nicht aussagekräftig. Die Suchparameter teilweise falsch gewählt. ","NESWhy":"-"},
+              {"responseid":"40173","interview_end":"2015-06-10 00:00:00","ContactFullName":"Mr. J****E L***S S*****S","email":"J*******S@P*******A.ES","Telephone1":"+3**********5","NPS":"5","NES":"3","NPSWhy":"falta de información estado de pedido, falta de claridad situación de pago etc...     ","NESWhy":"primero no hay acceso al pedido, después información muy limitada, la única información  aceptable la telefónica y mediante un 902."},
+              {"responseid":"40172","interview_end":"2015-06-10 00:00:00","ContactFullName":"SIG P*****O T*****I","email":"******@M***********A.IT","Telephone1":"+3**********7","NPS":"8","NES":"8","NPSWhy":"Qualita dei prodotti, ampiezza della gamma e velocita di spedizione","NESWhy":"-"},
+              {"responseid":"40170","interview_end":"2015-06-10 00:00:00","ContactFullName":"M J. H*****N","email":"J********N@L********T.FR","Telephone1":"+3*********0","NPS":"10","NES":"10","NPSWhy":"richesse des références simplicité pour les trouver et aide efficace au cas ou","NESWhy":"-"},
+              {"responseid":"40169","interview_end":"2015-06-10 00:00:00","ContactFullName":"Ms. R*****T G*****R","email":"A*********V_10@Y****O.COM","Telephone1":"+6********2","NPS":"7","NES":"10","NPSWhy":"most likely I recommend *company* to my friend but not for my respective clients.","NESWhy":"-"}],
+            "pageInfo":"1-20"});
           hitlist.lastResponse = JSON.parse(data)
         });
       </script>
