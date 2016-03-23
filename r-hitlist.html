@@ -364,8 +364,8 @@ Example:
         /*get first data*/
         this.requestResponse({initialLoad:true});
         /* setup actions on paging Buttons*/
-        this.$.pagingForward.addEventListener('tap',()=>{this._skipPage(true)});
-        this.$.pagingBackward.addEventListener('tap',()=>{this._skipPage(false)});
+        this.$.pagingForward.addEventListener('tap',function(){this._skipPage(true)}.bind(this));
+        this.$.pagingBackward.addEventListener('tap',function(){this._skipPage(false)}.bind(this));
       },
       /* If response is Array, it was requested by Autocomplete for column filters, else it's HitList data*/
       _routeResponse:function(response){
@@ -391,7 +391,7 @@ Example:
       _generateOpenTextFilter:function(){
         var input = document.createElement('paper-input');
         input.noLabelFloat = true; input.type='search'; input.style.width='30px'; input.placeholder = 'Filter';
-        input.addEventListener('blur', (e)=>{this.filterData(e)});
+        input.addEventListener('blur', function(e){this.filterData(e)}.bind(this));
         //input.addOwnKeyBinding('enter', this.filterData);
         return input
       },
@@ -404,8 +404,8 @@ Example:
       _generateDropdownFilter:function(column){
         var dd = document.createElement('r-dropdown');
         dd.noLabelFloat=true; dd.placeholder='Filter'; dd.style="width:30px;";
-        dd.addEventListener('tap',(e)=>{this._populateDropdownFilter(e,column);});
-        dd.addEventListener('iron-select',(e)=>{this.filterData(e)});
+        dd.addEventListener('tap',function(e){this._populateDropdownFilter(e,column);}.bind(this));
+        dd.addEventListener('iron-select',function(e){this.filterData(e)}.bind(this));
         return dd;
       },
       /**
@@ -491,11 +491,11 @@ Example:
               value = cell.content.selectedItem?cell.content.selectedItem.value:null; break;
             //TODO: rethink the folowing
             case this._elementType.Date:
-              value = [].slice.call(Polymer.dom(cell.content).querySelectorAll('paper-input')).filter((element)=>{return element.value.length>0});
+              value = [].slice.call(Polymer.dom(cell.content).querySelectorAll('paper-input')).filter(function(element){return element.value.length>0});
               break;
             case this._elementType.OpenNumeric:
               value = Polymer.dom(cell.content).querySelectorAll('paper-input');
-              [].slice.call(value).forEach((input)=>{input.output=input.value});
+              [].slice.call(value).forEach(function(input){input.output=input.value});
           break;
           case this._elementType.MultiElement:
           value = '';
@@ -572,11 +572,11 @@ Example:
           to.addEventListener('focus',this.showDialog);
           to.readonly=true;
           to.type='text';
-          from.addEventListener('value-changed',(e)=>{this.filterData(e)});
-          to.addEventListener('value-changed',(e)=>{this.filterData(e)});
+          from.addEventListener('value-changed',function(e){this.filterData(e)}.bind(this));
+          to.addEventListener('value-changed',function(e){this.filterData(e)}.bind(this));
         } else {
-          from.addEventListener('blur',(e)=>{this.filterData(e)});
-          to.addEventListener('blur',(e)=>{this.filterData(e)});
+          from.addEventListener('blur',function(e){this.filterData(e)}.bind(this));
+          to.addEventListener('blur',function(e){this.filterData(e)}.bind(this));
         }
         span.appendChild(from);
         span.appendChild(to);
@@ -588,7 +588,7 @@ Example:
        * */
       showDialog:function(e){
         var input = Polymer.dom(e).rootTarget;
-        var host=Polymer.dom(e).path.filter((item)=>{return item.localName==='r-hitlist';})[0];
+        var host=Polymer.dom(e).path.filter(function(item){return item.localName==='r-hitlist';})[0];
         if(input.date){host.$.picker.date = input.date}
         host.$.dialog.refInput = input;
         host.$.dialog.toggle();
@@ -609,8 +609,8 @@ Example:
        * clears value of date-input via a 'Clear' button inside the calendar dialog
        * */
       clearDialog:function(e){
-        var host=Polymer.dom(e).path.filter((item)=>{return item.localName==='r-hitlist';})[0];
-        var target = Polymer.dom(e).path.filter((item)=>{return item.id==='dialog'})[0].refInput;
+        var host=Polymer.dom(e).path.filter(function(item){return item.localName==='r-hitlist';})[0];
+        var target = Polymer.dom(e).path.filter(function(item){return item.id==='dialog'})[0].refInput;
         host.$.dialog.toggle();
         target.date = new Date();
         target.output = '';

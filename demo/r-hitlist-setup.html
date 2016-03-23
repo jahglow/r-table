@@ -17,7 +17,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
   <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
 
-  <link rel="import" href="../r-aggregated-table.html">
+  <link rel="import" href="../r-hitlist-setup.html">
   <style is="custom-style" include="demo-pages-shared-styles">
     demo-snippet {
       --demo-snippet-demo: {
@@ -37,213 +37,188 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <h3>r-aggregated-table indexed</h3>
   <demo-snippet>
     <template>
-      <script>function gotoSection(idx){
-        alert('Feel free to execute any code here. In reality you\'d be redirected to section '+ idx);
-      }
-      </script>
-      <r-aggregated-table heading="Aggregated Table"
-                          filterable
-                          indexed
-                          indexed-header="index"
-                          notify-click
-                          assisted
-                          columns-legacy="sortable;flex;sortDirection:asc;filterable;headerContent:Sections;hidable;hidingToggleText:Sections|sortable;sortDirection:desc;filterable;hidingToggleText:Marget;hidable|hidable;clickable;clickableIcon:settings-ethernet;clickableTooltip:Click to expand the Toolbox drawer;clickableFunction:gotoSection(4)|hidable|hidable;renderer:html;sortable|hidable;sortable">
-        <table id="confirmit_agg_table" class="t0_table bgred_txtwhite">
-          <colgroup>
-            <col width="250">
-            <col>
-            <col>
-            <col>
-            <col width="200px">
-            <col>
-          </colgroup>
-          <thead>
-          <tr class="t0_tr">
-            <td rowspan="3">
-            </td>
-            <td class="t0_chc bgred_txtwhite" rowspan="3">% Fav</td>
-            <td class="t0_chc bgred_txtwhite" >% Neut</td>
-            <td class="t0_chc bgred_txtwhite" rowspan="2">% Unfav</td>
-            <td class="t0_chc bgred_txtwhite" rowspan="3" width="200px">%</td>
-            <td class="t0_chc bgred_txtwhite">% difference on Favourable score</td>
-          </tr>
-          <tr class="t0_tr">
-            <td class="t0_chc bgred_txtwhite" rowspan="2">yay</td>
-            <td class="t0_chc bgred_txtwhite">Our 2013 Results</td>
-          </tr>
-          <tr class="t0_tr">
-            <td class="t0_chc bgred_txtwhite">Some Cell</td>
-            <td class="t0_chc bgred_txtwhite">Last Row Last Cell</td>
-          </tr>
-          </thead>
-          <tbody>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Group Values &amp; Rules</td>
-            <td class="t0_dc_total cf_Green bgpink">81</td>
-            <td class="t0_dc_total cf_Yellow bgpink">15</td>
-            <td class="t0_dc_total cf_Grey bgpink">4</td>
-            <td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_29">
-              <table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;">
-                <tbody>
-                <tr>
-                  <td class="barchart-cell" title="% Fav" width="81%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-                  <td class="barchart-cell" title="% Neut" width="15%" style="background:#ffc800;">&nbsp;</td>
-                  <td class="barchart-cell" title="%Unfav" width="4%" style="background:#c5c5c5;">&nbsp;</td>
-                </tr>
-                </tbody>
-              </table>
-            </td>
-            <td class="t0_dc_total bgpink">1</td>
-          </tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Clear &amp; Promising Direction - Group</td>
-            <td class="t0_dc_total cf_Green bgpink">79</td><td class="t0_dc_total cf_Yellow bgpink">15</td><td class="t0_dc_total cf_Grey bgpink">6</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_32"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="79%" style="background:#75ad40;border-left:1px solid black">&nbsp;1</td>
-            <td class="barchart-cell" title="% Neut" width="15%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="6%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">0</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Corporate Social Responsibility</td>
-            <td class="t0_dc_total cf_Green bgpink">78</td><td class="t0_dc_total cf_Yellow bgpink">18</td><td class="t0_dc_total cf_Grey bgpink">4</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_35"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="78%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="18%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="4%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">1</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Clear &amp; Promising Direction - Division</td>
-            <td class="t0_dc_total cf_Green bgpink">77</td><td class="t0_dc_total cf_Yellow bgpink">16</td><td class="t0_dc_total cf_Grey bgpink">6</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_38"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="78%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="16%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="6%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">0</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Quality &amp; Customer Focus</td>
-            <td class="t0_dc_total cf_Green bgpink">75</td><td class="t0_dc_total cf_Yellow bgpink">17</td><td class="t0_dc_total cf_Grey bgpink">9</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_41"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="75%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="16%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="9%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">3</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Clear &amp; Promising Direction - Division</td>
-            <td class="t0_dc_total cf_Green bgpink">78</td><td class="t0_dc_total cf_Yellow bgpink">16</td><td class="t0_dc_total cf_Grey bgpink">6</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_38"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="78%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="16%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="6%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">0</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Performance Management</td>
-            <td class="t0_dc_total cf_Green bgpink">68</td><td class="t0_dc_total cf_Yellow bgpink">18</td><td class="t0_dc_total cf_Grey bgpink">14</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_44"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="68%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="18%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="14%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">1</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Employee Enablement</td>
-            <td class="t0_dc_total cf_Green bgpink">67</td><td class="t0_dc_total cf_Yellow bgpink">19</td><td class="t0_dc_total cf_Grey bgpink">14</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_47"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="67%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="19%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="14%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">0</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Confidence in Leadership</td>
-            <td class="t0_dc_total cf_Green bgpink">67</td><td class="t0_dc_total cf_Yellow bgpink">21</td><td class="t0_dc_total cf_Grey bgpink">12</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_50"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="67%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="21%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="12%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">2</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Collaboration</td>
-            <td class="t0_dc_total cf_Green bgpink">66</td><td class="t0_dc_total cf_Yellow bgpink">20</td><td class="t0_dc_total cf_Grey bgpink">13</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_53"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="66%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="21%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="13%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">3</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Respect &amp; Recognition</td>
-            <td class="t0_dc_total cf_Green bgpink">65</td><td class="t0_dc_total cf_Yellow bgpink">20</td><td class="t0_dc_total cf_Grey bgpink">14</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_56"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="65%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="21%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="14%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">1</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Employee Engagement</td>
-            <td class="t0_dc_total cf_Green bgpink">64</td><td class="t0_dc_total cf_Yellow bgpink">22</td><td class="t0_dc_total cf_Grey bgpink">14</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_59"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="64%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="22%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="14%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">1</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Authority &amp; Empowerment</td>
-            <td class="t0_dc_total cf_Green bgpink">63</td><td class="t0_dc_total cf_Yellow bgpink">24</td><td class="t0_dc_total cf_Grey bgpink">13</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_62"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="63%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="24%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="13%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">1</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Resources</td>
-            <td class="t0_dc_total cf_Green bgpink">62</td><td class="t0_dc_total cf_Yellow bgpink">21</td><td class="t0_dc_total cf_Grey bgpink">16</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_65"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="62%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="22%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="16%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">2</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Development Opportunities</td>
-            <td class="t0_dc_total cf_Green bgpink">60</td><td class="t0_dc_total cf_Yellow bgpink">25</td><td class="t0_dc_total cf_Grey bgpink">15</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_68"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="60%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="25%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="15%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">2</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Work, Structure, &amp; Process</td>
-            <td class="t0_dc_total cf_Green bgpink">56</td><td class="t0_dc_total cf_Yellow bgpink">26</td><td class="t0_dc_total cf_Grey bgpink">18</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_71"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="56%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="26%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="18%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">0</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Training</td>
-            <td class="t0_dc_total cf_Green bgpink">53</td><td class="t0_dc_total cf_Yellow bgpink">23</td><td class="t0_dc_total cf_Grey bgpink">23</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_74"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="53%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="24%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="23%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">2</td></tr>
-          <tr class="t0_tr">
-            <td class="t0_hc_total bgpink">Pay &amp; Benefit</td>
-            <td class="t0_dc_total cf_Green bgpink">47</td><td class="t0_dc_total cf_Yellow bgpink">28</td><td class="t0_dc_total cf_Grey bgpink">24</td><td class="t0_dc_total bgpink" style="margin:0;padding:2px;height:100%;" id="yui_3_8_0_1_1450108391240_77"><table class="barchart" border="0" width="100%" height="100%" cellpadding="0" cellspacing="0" style="height: 24px;"><tbody><tr>
-            <td class="barchart-cell" title="% Fav" width="47%" style="background:#75ad40;border-left:1px solid black">&nbsp;</td>
-            <td class="barchart-cell" title="% Neut" width="29%" style="background:#ffc800;">&nbsp;</td>
-            <td class="barchart-cell" title="%Unfav" width="24%" style="background:#c5c5c5;">&nbsp;</td>
-          </tr></tbody></table>
-          </td><td class="t0_dc_total bgpink">2</td></tr>
-          </tbody>
-        </table>
-      </r-aggregated-table>
+      <r-hitlist-setup></r-hitlist-setup>
+
       <script>
         HTMLImports.whenReady(function(){
-          var aggregatedTable = document.querySelector('r-aggregated-table');
-          // we want the first data-column have bold text, thus wrap it with <strong>
-          aggregatedTable.columns[0].renderer = function(cell){
-            var tempEl = document.createElement('strong');
-            tempEl.innerHTML = cell.data;
-            cell.element.innerHTML=tempEl.outerHTML;
-          }
+          var setup = document.querySelector('r-hitlist-setup');
+          console.log(setup.hitlistOriginalConfig);
+          var hitlistOriginalConfig = {
+            "version":"19.1.1503",
+            "singleViewApiUrl":"/reportal/SingleView/929c0d36-8ffb-4d3a-a081-fc69744d342d/00859fab-8c09-4186-8471-f21d23b8c185/p1441947858/{respondentid}?Preview=True\u0026language=9",
+            "singleViewFormsChunkApiUrl":"/reportal/SingleViewCenterQuestions/929c0d36-8ffb-4d3a-a081-fc69744d342d/00859fab-8c09-4186-8471-f21d23b8c185/p1441947858/{respondentid}/Start/{start}/Size/10?Preview=True\u0026language=9",
+            "singleViewTexts":{
+              "REPORT_SINGLEVIEW_RESPONDENTOVERVIEW":"Respondent overview",
+              "REPORT_SINGLEVIEW_PRINT":"Print the current respondent",
+              "REPORT_SINGLEVIEW_CLOSE":"Close this overlay",
+              "REPORT_SINGLEVIEW_FILTER":"Filter questions",
+              "REPORT_SINGLEVIEW_NOTHINGFOUND":"No questions match your search",
+              "REPORT_SINGLEVIEW_PREVIOUS":"Previous",
+              "REPORT_SINGLEVIEW_PREVIOUSHINT":"Previous respondent",
+              "REPORT_SINGLEVIEW_NEXT":"Next",
+              "REPORT_SINGLEVIEW_NEXTHINT":"Next respondent",
+              "REPORT_SINGLEVIEW_OF":"{0} of {1}",
+              "REPORT_SINGLEVIEW_MORE":"{0} more",
+              "REPORT_SINGLEVIEW_ALTERNATIVES":"Answers alternatives:"
+            },
+            "hitlistData":null,
+            "serviceUrl":"/reportal/Report/929c0d36-8ffb-4d3a-a081-fc69744d342d/HitList/00859fab-8c09-4186-8471-f21d23b8c185?DbType=Production\u0026Language=9",
+            "searchValues":[],
+            "sortingPagingValues":null,
+            "clientId":"p_ctl02_ctl00",
+            "columns":[
+              {"key":"responseid","label":"responseid","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"responseid","headerStyle":null,"contentStyle":null,"alternatingStyle":null},
+              {"key":"interview_start","label":"Date of the interview","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Date of the interview","headerStyle":"","contentStyle":"","alternatingStyle":""},
+              {"key":"q159","label":"Comments","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Comments","headerStyle":"","contentStyle":"","alternatingStyle":""}
+            ],
+            "componentId":"00859fab-8c09-4186-8471-f21d23b8c185",
+            "pageId":"d9964084-22bf-494b-bc63-68ee7be1f867",
+            "prevText":"",
+            "nextText":"",
+            "searchItems":[
+              {"id":"responseid","label":"responseid","precode":null,"type":2,"autoCompleteContext":null,"autoCompleteValueInHidden":false},
+              {"id":"interview_start","label":"Date of the interview","precode":null,"type":0,"autoCompleteContext":null,"autoCompleteValueInHidden":false},
+              {"id":"q4_3","label":"Overall satisfaction","precode":null,"type":6,"autoCompleteContext":"hitlistcriteria;00859fab-8c09-4186-8471-f21d23b8c185;q4_3","autoCompleteValueInHidden":true},
+              {"id":"q159","label":"Comments","precode":null,"type":1,"autoCompleteContext":null,"autoCompleteValueInHidden":false}
+            ],
+            "preview":true,
+            "allColumns":[
+              {"key":"responseid","label":"responseid","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"responseid","headerStyle":null,"contentStyle":null,"alternatingStyle":null},
+              {"key":"interview_start","label":"Date of the interview","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Date of the interview","headerStyle":"","contentStyle":"","alternatingStyle":""},
+              {"key":"FT_PT","label":"Full time or part time students","sortable":false,"allowHTML":false,"hiddenByDefault":false,"abbr":"Full time or part time students","headerStyle":"hitlistHeader","contentStyle":"","alternatingStyle":""},
+              {"key":"q4_3","label":"Overall satisfaction","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Overall satisfaction","headerStyle":"hitlistHeader","contentStyle":"","alternatingStyle":""},
+              {"key":"q159","label":"Comments","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Comments","headerStyle":"","contentStyle":"","alternatingStyle":""}
+            ],
+            "pageAjaxEnabled":false,
+            "language":9,
+            "hashedProjectId":"p1441947858_44D8083231402E1A864E6A8A8B6ED074075B446D",
+            "showSingleViewOnRowSelect":false,
+            "styles":{"table":"","header":"","cell":""},
+            "captions":{
+              "stoe":"Smaller than or equal",
+              "gtoe":"Greater than or equal",
+              "between":"Between",
+              "before":"Before",
+              "after":"After",
+              "exactly":"Exactly",
+              "showdefaultcols":"Show default columns",
+              "apply":"Apply",
+              "cancel":"Cancel",
+              "showhide":"Show / Hide columns",
+              "yes":"Yes",
+              "no":"No",
+              "loadingData":"Loading data, please wait...",
+              "checkall":"Check all",
+              "uncheckall":"Uncheck all",
+              "errorLoading":"Error loading data",
+              "errorNoColumns":"No columns selected"
+            },
+            "noInitialLoad":false
+          };
+          console.log(hitlistOriginalConfig);
+          setup.hitlistOriginalConfig = hitlistOriginalConfig
+
         })
+      </script>
+      <script>
+        // imitate Reportal page with config
+        //polyfill missing YUI
+        function YUI(){return {use:function(el,callback){}}} var Y = YUI();
+
+        g_ReportId = '929c0d36-8ffb-4d3a-a081-fc69744d342d';
+
+        window.DatePicker_config = window.DatePicker_config || {"cultureName":"en-US","weekRule":0,"datePattern":"M/d/yyyy","dateSeparator":"/","shortDayNames":["Su","Mo","Tu","We","Th","Fr","Sa"],"monthNames":["January","February","March","April","May","June","July","August","September","October","November","December",""],"weekStartsOn":0,"okText":"OK","cancelText":"Cancel"};
+
+        YUI().use('reportal-hitlist', function (Y) {
+          Y.one('#p_ctl02_ctl00_hitlist').plug(Y.Reportal.HitList, {
+            "version":"19.1.1503",
+            "singleViewApiUrl":"/reportal/SingleView/929c0d36-8ffb-4d3a-a081-fc69744d342d/00859fab-8c09-4186-8471-f21d23b8c185/p1441947858/{respondentid}?Preview=True\u0026language=9",
+            "singleViewFormsChunkApiUrl":"/reportal/SingleViewCenterQuestions/929c0d36-8ffb-4d3a-a081-fc69744d342d/00859fab-8c09-4186-8471-f21d23b8c185/p1441947858/{respondentid}/Start/{start}/Size/10?Preview=True\u0026language=9",
+            "singleViewTexts":{
+              "REPORT_SINGLEVIEW_RESPONDENTOVERVIEW":"Respondent overview",
+              "REPORT_SINGLEVIEW_PRINT":"Print the current respondent",
+              "REPORT_SINGLEVIEW_CLOSE":"Close this overlay",
+              "REPORT_SINGLEVIEW_FILTER":"Filter questions",
+              "REPORT_SINGLEVIEW_NOTHINGFOUND":"No questions match your search",
+              "REPORT_SINGLEVIEW_PREVIOUS":"Previous",
+              "REPORT_SINGLEVIEW_PREVIOUSHINT":"Previous respondent",
+              "REPORT_SINGLEVIEW_NEXT":"Next",
+              "REPORT_SINGLEVIEW_NEXTHINT":"Next respondent",
+              "REPORT_SINGLEVIEW_OF":"{0} of {1}",
+              "REPORT_SINGLEVIEW_MORE":"{0} more",
+              "REPORT_SINGLEVIEW_ALTERNATIVES":"Answers alternatives:"
+            },
+            "hitlistData":null,
+            "serviceUrl":"/reportal/Report/929c0d36-8ffb-4d3a-a081-fc69744d342d/HitList/00859fab-8c09-4186-8471-f21d23b8c185?DbType=Production\u0026Language=9",
+            "searchValues":[],
+            "sortingPagingValues":null,
+            "clientId":"p_ctl02_ctl00",
+            "columns":[
+              {"key":"responseid","label":"responseid","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"responseid","headerStyle":null,"contentStyle":null,"alternatingStyle":null},
+              {"key":"interview_start","label":"Date of the interview","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Date of the interview","headerStyle":"","contentStyle":"","alternatingStyle":""},
+              {"key":"q159","label":"Comments","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Comments","headerStyle":"","contentStyle":"","alternatingStyle":""}
+            ],
+            "componentId":"00859fab-8c09-4186-8471-f21d23b8c185",
+            "pageId":"d9964084-22bf-494b-bc63-68ee7be1f867",
+            "prevText":"",
+            "nextText":"",
+            "searchItems":[
+              {"id":"responseid","label":"responseid","precode":null,"type":2,"autoCompleteContext":null,"autoCompleteValueInHidden":false},
+              {"id":"interview_start","label":"Date of the interview","precode":null,"type":0,"autoCompleteContext":null,"autoCompleteValueInHidden":false},
+              {"id":"q4_3","label":"Overall satisfaction","precode":null,"type":6,"autoCompleteContext":"hitlistcriteria;00859fab-8c09-4186-8471-f21d23b8c185;q4_3","autoCompleteValueInHidden":true},
+              {"id":"q159","label":"Comments","precode":null,"type":1,"autoCompleteContext":null,"autoCompleteValueInHidden":false}
+            ],
+            "preview":true,
+            "allColumns":[
+              {"key":"responseid","label":"responseid","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"responseid","headerStyle":null,"contentStyle":null,"alternatingStyle":null},
+              {"key":"interview_start","label":"Date of the interview","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Date of the interview","headerStyle":"","contentStyle":"","alternatingStyle":""},
+              {"key":"FT_PT","label":"Full time or part time students","sortable":false,"allowHTML":false,"hiddenByDefault":false,"abbr":"Full time or part time students","headerStyle":"hitlistHeader","contentStyle":"","alternatingStyle":""},
+              {"key":"q4_3","label":"Overall satisfaction","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Overall satisfaction","headerStyle":"hitlistHeader","contentStyle":"","alternatingStyle":""},
+              {"key":"q159","label":"Comments","sortable":true,"allowHTML":false,"hiddenByDefault":false,"abbr":"Comments","headerStyle":"","contentStyle":"","alternatingStyle":""}
+            ],
+            "pageAjaxEnabled":false,
+            "language":9,
+            "hashedProjectId":"p1441947858_44D8083231402E1A864E6A8A8B6ED074075B446D",
+            "showSingleViewOnRowSelect":false,
+            "styles":{"table":"","header":"","cell":""},
+            "captions":{
+              "stoe":"Smaller than or equal",
+              "gtoe":"Greater than or equal",
+              "between":"Between",
+              "before":"Before",
+              "after":"After",
+              "exactly":"Exactly",
+              "showdefaultcols":"Show default columns",
+              "apply":"Apply",
+              "cancel":"Cancel",
+              "showhide":"Show / Hide columns",
+              "yes":"Yes",
+              "no":"No",
+              "loadingData":"Loading data, please wait...",
+              "checkall":"Check all",
+              "uncheckall":"Uncheck all",
+              "errorLoading":"Error loading data",
+              "errorNoColumns":"No columns selected"
+            },
+            "noInitialLoad":false
+          });
+        });
+
+        HitListElementType={"Date":0,"OpenText":1,"OpenNumeric":2,"Single":3,"Multi":4,"MultiElement":5,"GridElement":6,"SurveyLink":7,"NotSupported":8,"AdditionalColumn":9,"Geography":10,"ImageUpload":11}
+        SearchableListOperator={"Equal":0,"LessThan":1,"GreaterThan":2,"LessThanOrEqual":3,"GreaterThanOrEqual":4,"LIKE":5,"IS":6,"ISNOT":7,"IsNull":8,"NotEqual":9,"IN":10,"Between":11,"NotIn":12,"SubCriteria":13,"LessThanOrExactEqual":14,"GreaterThanOrExactEqual":15,"IsNotNull":16}
+
+        Y.use('reportal-viewmode', function() {
+          viewmode.version = '1503';
+          viewmode.preview = true;
+          viewmode.ajaxEnabled = false;
+          viewmode.useBestIE = true;
+          viewmode.fromMenu = false;
+          viewmode.ieWarningDisabled = false;
+          viewmode.hasTableDrilldown = false;
+          viewmode.pageLabel = 'ptestStudents';
+          viewmode.load();
+        });
+
       </script>
     </template>
   </demo-snippet>
