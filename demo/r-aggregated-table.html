@@ -18,6 +18,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
 
   <link rel="import" href="../r-aggregated-table.html">
+  <link rel="import" href="../../r-customizer/r-customizer.html">
   <style is="custom-style" include="demo-pages-shared-styles">
     demo-snippet {
       --demo-snippet-demo: {
@@ -28,11 +29,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         max-height: 400px;
       };
     }
-    r-aggregated-table:hover,r-card:hover{
+    *[customizable]:hover{
       border-radius:inherit;
       outline: 3px dashed #0b97c4;
     }
-    *:hover::before, * ::content *:hover::before{
+    *[customizable]:hover::before, * ::content *[customizable]:hover::before{
       position:absolute;
       font-size: 10px;
       padding:5px;
@@ -48,11 +49,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
   </style>
 </head>
 <body unresolved>
+<r-customizer style="width:300px; float:left"></r-customizer>
 <div class="vertical-section-container centered">
 
   <h3>r-aggregated-table indexed</h3>
   <demo-snippet>
     <template>
+
+
       <script>function gotoSection(idx){
         alert('Feel free to execute any code here. In reality you\'d be redirected to section '+ idx);
       }

@@ -17,6 +17,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../iron-icons/iron-icons.html">
 <link rel="import" href="../paper-tooltip/paper-tooltip.html">
 <link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../r-customizer/r-customizer-inspect-behavior.html">
 
 
 <!--
@@ -51,11 +52,13 @@ Example:
         height:auto;
         position:relative;
       }
+      /* customizer-related style */
       :host::before{
         content: 'r-aggregated-table';
         display:none;
-        @apply(--r-aggregated-table-before);
+        @apply(--r-customizer-hover);
       }
+
       :host ::content> table{display:none}
       :host r-card {--r-card-content:{padding:0};}
       #columnToggle .dropdown-content paper-icon-item{
@@ -83,7 +86,7 @@ Example:
     </style>
 
     <content select="table" id="source"></content>
-    <r-card heading$="[[heading]]" id="card" toolbox assisted$="[[assisted]]">
+    <r-card heading$="[[heading]]" id="card" toolbox$="[[toolbox]]" assisted$="[[assisted]]" customizable>
       <div class="card-content">
         <vaadin-grid id="grid"></vaadin-grid>
       </div>
@@ -119,13 +122,15 @@ Example:
       },
       behaviors: [
         Confirmit.RTableBehavior,
-        Confirmit.RCardBehavior
+        Confirmit.RCardBehavior,
+        Confirmit.RCustomizerInspectBehavior
       ],
+      hostAttributes:{'customizable':true, 'toolbox':true},
       properties: {
         _sortedColumn:{
           type:Number,
           value:null
-        },
+        }
       },
 
       _addControls:function(e) {
